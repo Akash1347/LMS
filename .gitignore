@@ -1,6 +1,5 @@
 # Dependencies
 node_modules/
-auth-lib/
 resource/
 
 # Environment variables
