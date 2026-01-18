@@ -13,9 +13,9 @@ import authRoutes from './routes/authRoute.js';
 import userRoutes from './routes/userRoute.js';
 import path from 'path';
 import { getJwks } from './controllers/jwksController.js';
+import { connectRabbitMq } from './config/rabbitmq.js';
 
-
-
+connectRabbitMq();
 
 app.get('/', async (req, res) => {
     const data = await pool.query('select * from users');
