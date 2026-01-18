@@ -1,6 +1,6 @@
 # Dependencies
 node_modules/
-resource/
+resources/
 
 # Environment variables
 .env
