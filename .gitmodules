@@ -1,0 +1,3 @@
+[submodule "auth-lib"]
+	path = auth-lib
+	url = https://github.com/Akash1347/auth-lib.git
