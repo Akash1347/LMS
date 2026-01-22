@@ -1,7 +1,7 @@
 import pool from "../config/db.js";
 import bcrypt from "bcryptjs";
 import { generateToken } from "../utils/generateToken.js";
-import { publishEvent } from "../queues/publisher.js";
+import { publishEvent, publishUserRegisteredEvent } from "../queues/publisher.js";
 
 export const registerUser = async (req, res) => {
     const { username, email, password, role } = req.body;
@@ -27,10 +27,11 @@ export const registerUser = async (req, res) => {
         // sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax',
         //     maxAge: 24 * 60 * 60 * 1000 
         // });
-        await publishEvent("user.created" ,{
-            email: user.email,
-            name: user.name
-        });
+        // await publishEvent("user.created" ,{
+        //     email: user.email,
+        //     name: user.name
+        // });
+        publishUserRegisteredEvent(user);
         return res.status(201).json({ success: true, message: 'User registered successfully' });
     } catch (error) {
         console.error(error);

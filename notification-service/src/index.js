@@ -1,23 +1,13 @@
 import dotenv from "dotenv"
 dotenv.config();
+console.log('DATABASE_URL:', process.env.DATABASE_URL);
 import express from "express";
-import { connectRabbitMq } from "./config/rabbitMq.js";
-import { emailVerifyWorker, passwordResetWorker, userCreatedWorker } from "./jobs/worker.js";
+import { start } from "./server.js";
 
 const app = express();
 
 const PORT = process.env.PORT || 3006;
-
-// Initialize RabbitMQ connection and start worker
-connectRabbitMq().then(() => {
-    // Start the user created worker after RabbitMQ connection is established
-    userCreatedWorker();
-    passwordResetWorker();
-    emailVerifyWorker();
-}).catch((error) => {
-    console.error("Failed to connect to RabbitMQ:", error);
-});
-
-app.listen(PORT, (req, res) => {
+await start();
+app.listen(PORT, () => {
     console.log(`notification service Running on port ${PORT}`);
 })
