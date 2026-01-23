@@ -1,12 +1,18 @@
 import { getChannel } from "../config/rabbitmq.js";
 
 
-export async function publishEvent(routingKey, message) {
+export async function publishEvent(routingKey,type , payload) {
   const channel = getChannel();
+  const event = {
+    eventId: crypto.randomUUID(),
+    type: type,
+    payload: payload
+  }
   channel.publish(
-    "lms_events",
+    "auth.events",
     routingKey,
-    Buffer.from(JSON.stringify(message))
+    Buffer.from(JSON.stringify(event)),
+    { persistent: true }
   );
   console.log(`Published event to ${routingKey}`);
 }
@@ -14,8 +20,7 @@ export async function publishEvent(routingKey, message) {
 export async function publishUserRegisteredEvent(user) {
   const channel = getChannel();
 
-  const exchange = "auth.events";
-  await channel.assertExchange(exchange, "topic", { durable: true });
+  
 
   const event = {
     eventId: crypto.randomUUID(),
@@ -27,7 +32,7 @@ export async function publishUserRegisteredEvent(user) {
   };
 
   channel.publish(
-    exchange,
+    "auth.events",
     "user.registered",
     Buffer.from(JSON.stringify(event)),
     { persistent: true }
@@ -36,3 +41,5 @@ export async function publishUserRegisteredEvent(user) {
   console.log(event);
 
 }
+
+ 

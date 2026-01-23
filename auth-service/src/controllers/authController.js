@@ -1,7 +1,7 @@
 import pool from "../config/db.js";
 import bcrypt from "bcryptjs";
 import { generateToken } from "../utils/generateToken.js";
-import { publishEvent, publishUserRegisteredEvent } from "../queues/publisher.js";
+import { publishEvent } from "../queues/publisher.js";
 
 export const registerUser = async (req, res) => {
     const { username, email, password, role } = req.body;
@@ -31,7 +31,14 @@ export const registerUser = async (req, res) => {
         //     email: user.email,
         //     name: user.name
         // });
-        publishUserRegisteredEvent(user);
+        //publishUserRegisteredEvent(user);
+        publishEvent("user.register", "USER_REGISTERED", 
+            {
+                userId: user.user_id,
+                email: user.email,
+                name: user.user_name
+            }
+        )
         return res.status(201).json({ success: true, message: 'User registered successfully' });
     } catch (error) {
         console.error(error);
@@ -133,17 +140,19 @@ export const forgotPassword = async (req, res) => {
         const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes from now
         const otp = Math.floor(100000 + Math.random() * 900000);
         await pool.query('UPDATE users SET reset_otp_expires_at = $1, reset_otp = $2 WHERE email = $3', [expiresAt, otp, email]);
-        
+
         //event send-notification for user to reset password from notification service 
-        await publishEvent("password.reset" ,{
+
+        await publishEvent("user.resetOtp", "USER_RESET_OTP", {
+            user_id: userData.rows[0].user_id,
             email: email,
             otp: otp,
             expiresAt: expiresAt
         });
-        
+
         return res.status(200).json({ success: true, message: 'OTP sent to email', data: { expiresAt, otp } });
-        
-    
+
+
     } catch (error) {
         console.error(error);
         return res.status(500).json({ success: false, message: 'Internal server error' });
@@ -189,15 +198,16 @@ export const sendVerificationOtp = async (req, res) => {
         const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes from now
         const otp = Math.floor(100000 + Math.random() * 900000);
         await pool.query('UPDATE users SET verify_otp_expires_at = $1, verify_otp = $2 WHERE user_id = $3', [expiresAt, otp, req.userId]);
-        
+
         //event send-notification for user to verify account from notification service
-        await publishEvent("email.verify",{
+        await publishEvent("user.VerifyOtp", "USER_VERIFY_OTP", {
+            user_id: user.user_id,
             email: user.email,
             otp: otp,
             expiresAt: expiresAt
         })
 
-        return res.status(200).json({ success: true, message: 'Verification OTP sent to email' ,data:{otp:otp, expiresAt:expiresAt}});
+        return res.status(200).json({ success: true, message: 'Verification OTP sent to email', data: { otp: otp, expiresAt: expiresAt } });
     } catch (error) {
         console.error(error);
         return res.status(500).json({ success: false, message: 'Internal server error' });

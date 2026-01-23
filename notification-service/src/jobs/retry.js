@@ -1,5 +1,5 @@
 import { NotificationModel } from "../models/notifications.js";
-import { sendOtpEmail } from "../channels/email/emailSender.js";
+import { sendEmail } from "../channels/email/emailSender.js";
 
 export async function startWorker() {
     setInterval(async () => {
@@ -8,7 +8,7 @@ export async function startWorker() {
         for(const n of notifications) {
             try{
                 console.log(n.payload);
-                await sendOtpEmail(n.payload);
+                await sendEmail(n.payload, n.event_type);
                 await NotificationModel.markSent(n.id);
                 console.log("notification sent to user...")
             } catch(err){
