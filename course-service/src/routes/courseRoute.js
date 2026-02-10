@@ -1,12 +1,16 @@
 import { requireRole } from "@akash1347/auth-lib";
 import { requireAuth } from "../config/auth.config.js";
-import { createCourse, createModule, createLesson } from "../controllers/courseController.js";
+import { createCourse, deleteCourse, editCourse } from "../controllers/courseController.js";
+import { createModule, deleteModule, editModule } from "../controllers/moduleController.js";
+import { createLesson, deleteLesson } from "../controllers/lessonController.js";
 import express from "express";
 import { upload } from "../config/cloudConfig.js";
 const route = express.Router();
 
 // POST /api/course - Create a new course
 route.post('/', requireAuth, requireRole("Instructor"), createCourse);
+route.delete('/', requireAuth, requireRole("Instructor"), deleteCourse);
+route.patch('/', requireAuth, requireRole("Instructor"), editCourse);
 
 // GET /api/course - Get all courses (optional)
 route.get('/', (req, res) => {
@@ -19,10 +23,12 @@ route.get('/', (req, res) => {
     });
 });
 route.post('/module', requireAuth, requireRole("Instructor"), createModule);
-// Test route without authentication for debugging
-route.post('/content-test', ...createLesson);
+route.delete('/module', requireAuth, requireRole("Instructor"), deleteModule);
+route.patch('/module', requireAuth, requireRole("Instructor"), editModule);
+ 
 
-route.post('/content', requireAuth, ...createLesson);
+route.post('/content', requireAuth, requireRole("Instructor"), ...createLesson);
+route.delete('/content', requireAuth, requireRole("Instructor"), deleteLesson);
 
 export default route;
 

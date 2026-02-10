@@ -9,7 +9,7 @@ export const generateToken = (user) => {
     };
     const options = {
         algorithm: 'RS256',
-        expiresIn: '1d',
+        expiresIn: '1y', //for 1 year
         issuer: 'auth-service'
     };
     return jwt.sign(payload, privateKey, options);
