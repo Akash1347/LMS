@@ -6,7 +6,7 @@ export const connectRabbitMq = async() => {
     const rabbitMq_URL = process.env.rabbitMq_URL;
     const connection = await amqplib.connect(rabbitMq_URL);
     channel = await(connection.createChannel());
-    const exchange = "enrollment.envents";
+    const exchange = "enrollment.events";
     await channel.assertExchange(exchange, "topic", { durable: true });
 
     console.log("RabbitMQ connected");

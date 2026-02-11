@@ -37,7 +37,13 @@ export const createCourse = asyncHandler(async (req, res) => {
             currency || "USD"
         ]
     );
-    await emitCoursePublished(result.rows[0]);
+    const emittedCourseDat = {
+        id: result.rows[0].id,
+        status: result.rows[0].status,
+        price: result.rows[0].price,
+        currency: result.rows[0].currency
+    };
+    await emitCoursePublished(emittedCourseDat);
     res.status(201).json({
         success: true,
         message: "Course created successfully",
