@@ -7,7 +7,8 @@ import asyncHandler from "../utils/async-handler.js";
 export const createLesson = [
     upload, // multer memory middleware
     asyncHandler(async (req, res) => {
-        const { module_id, title, type } = req.body;
+        const { title, type } = req.body;
+        const module_id = req.params.module_id || req.body.module_id;
         let { order_index } = req.body;
 
         console.log("Request body:", req.body);
@@ -70,7 +71,8 @@ export const createLesson = [
 ];
 
 export const deleteLesson = asyncHandler(async (req, res) => {
-    const { lesson_id, public_id } = req.body;
+    const public_id = req.body.public_id;
+    const lesson_id = req.params.lesson_id || req.body.lesson_id;
     if (!lesson_id || !public_id) {
         return res.status(400).json({ success: false, message: "lesson_id and public_id are required" });
     }
@@ -110,4 +112,118 @@ export const deleteLesson = asyncHandler(async (req, res) => {
         data: { deleted_lesson_id: result.rows[0].id }
     });
 });
+
+export const getLessonsByModuleId = asyncHandler(async (req, res) => {
+    const { module_id } = req.params;
+    if (!module_id) {
+        return res.status(400).json({ success: false, message: "module_id is required" });
+    }
+    const result = await pool.query(
+        `SELECT id, title, type, content_ref, order_index 
+        FROM lesson
+        WHERE module_id = $1
+        ORDER BY order_index ASC`,
+        [module_id]
+    );
+    return res.status(200).json({
+        success: true,
+        message: "Lessons retrieved successfully",
+        data: result.rows
+    });
+});
+
+export const createQuiz = asyncHandler(async (req, res) => {
+    const { course_id, title, description, time_limit, total_marks } = req.body;
+    const instructorId = req.user.sub;
+
+    if (!course_id || !title) {
+        return res.status(400).json({ success: false, message: "course_id and title are required" });
+    }
+    const isInstructorCanCreateQuiz = await pool.query(
+        `SELECT 1 FROM course WHERE id = $1 AND instructor_id = $2`,
+        [course_id, instructorId]
+    );
+
+    if (isInstructorCanCreateQuiz.rows.length === 0) {
+        return res.status(403).json({ success: false, message: "You don't have permission to create quiz for this course" });
+    }
+    // start transaction
+    await pool.query("BEGIN");
+    try {
+        const quizResult = await pool.query(
+            `INSERT INTO quizzes (course_id, title, description, time_limit, total_marks) 
+            VALUES ($1, $2, $3, $4, $5)
+            RETURNING *`,
+            [course_id, title, description || "", time_limit || null, total_marks || 0]
+        );
+        const quizId = quizResult.rows[0].id;
+
+        // insert bulk questions
+        const questions = req.body.questions || [];
+        const questionValues = [];
+        const questionPlaceholders = [];
+
+        questions.forEach((q, index) => {
+            let parsedOptions = q.options || [];
+
+            if (typeof parsedOptions === "string") {
+                try {
+                    parsedOptions = JSON.parse(parsedOptions);
+                } catch (_err) {
+                    throw new Error(`Invalid JSON format for options at question index ${index}`);
+                }
+            }
+
+            const correctOptionId = q.correct_option_id || q.correct_answer_id || q.correct_answer;
+
+            if (!correctOptionId) {
+                throw new Error(`correct_option_id (or correct_answer_id) is required at question index ${index}`);
+            }
+
+            const baseIndex = index * 5;
+            questionPlaceholders.push(
+                `($${baseIndex + 1}, $${baseIndex + 2}, $${baseIndex + 3}, $${baseIndex + 4}, $${baseIndex + 5})`
+            );
+
+            questionValues.push(
+                quizId,
+                q.question_text,
+                JSON.stringify(parsedOptions),
+                correctOptionId,
+                q.marks || 0
+            );
+        });
+
+        if (questionValues.length > 0) {
+            await pool.query(
+                `INSERT INTO questions (quiz_id, question_text, options, correct_option_id, marks) 
+                    VALUES ${questionPlaceholders.join(", ")}`,
+                questionValues
+            );
+        }
+
+        await pool.query("COMMIT");
+        return res.status(201).json({
+            success: true,
+            message: "Quiz created successfully",
+            data: quizResult.rows[0]
+        });
+    } catch (error) {
+        await pool.query("ROLLBACK");
+        throw error;
+    }
+}
+);
+
+
+
+
+
+
+
+
+
+
+
+
 

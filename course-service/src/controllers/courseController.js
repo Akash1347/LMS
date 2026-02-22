@@ -52,7 +52,7 @@ export const createCourse = asyncHandler(async (req, res) => {
 });
 
 export const deleteCourse = asyncHandler(async (req, res) => {
-    const { course_id } = req.body;
+    const course_id = req.params.course_id;
     const instructorId = req.user.sub;
 
     if (!course_id) {
@@ -76,7 +76,8 @@ export const deleteCourse = asyncHandler(async (req, res) => {
 });
 
 export const editCourse = asyncHandler(async (req, res) => {
-    const { course_id, title, description, category, level, language, price, currency } = req.body;
+    const { title, description, category, level, language, price, currency } = req.body;
+    const course_id = req.params.course_id || req.body.course_id;
     const instructorId = req.user.sub;
 
     if (!course_id) {
@@ -129,3 +130,21 @@ export const getCourseById = asyncHandler(async (req, res) => {
         data: result.rows[0]
     });
 });
+
+
+export const getBulkCourseById = asyncHandler(async(req, res) => {
+    const {course_ids} = req.body;
+    if(!course_ids || !Array.isArray(course_ids) || course_ids.length === 0) {
+        return res.status(400).json({ success: false, message: "course_ids must be a non-empty array" });
+    }
+    const result = await pool.query(
+        `SELECT * FROM course WHERE id = ANY($1)`,
+        [course_ids]
+    );
+    return res.status(200).json({
+        success: true,
+        message: "Courses retrieved successfully",
+        data: result.rows
+    });
+
+})

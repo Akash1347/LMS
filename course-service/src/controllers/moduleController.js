@@ -2,7 +2,8 @@ import pool from "../config/db.js";
 import asyncHandler from "../utils/async-handler.js";
 
 export const createModule = asyncHandler(async (req, res) => {
-    const { course_id, title, order_index } = req.body;
+    const { title, order_index } = req.body;
+    const course_id = req.params.course_id || req.body.course_id;
     const instructorId = req.user.sub;
 
     if (!course_id || !title || !order_index) {
@@ -45,7 +46,8 @@ export const createModule = asyncHandler(async (req, res) => {
 });
 
 export const editModule = asyncHandler(async (req, res) => {
-    const { module_id, title, order_index } = req.body;
+    const { title, order_index } = req.body;
+    const module_id = req.params.module_id;
     const instructorId = req.user.sub;
 
     if (!module_id) {
@@ -75,7 +77,7 @@ export const editModule = asyncHandler(async (req, res) => {
 });
 
 export const deleteModule = asyncHandler(async (req, res) => {
-    const { module_id } = req.body;
+    const module_id = req.params.module_id || req.body.module_id;
     const instructorId = req.user.sub;
 
     if (!module_id) {

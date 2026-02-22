@@ -6,7 +6,7 @@ export async function connectRabbitMq() {
     channel = await connection.createChannel();
     const exchanges = [
         { name: "auth.events", routingKey: "user.*",queue: "notification.auth" },
-        { name: "course.events", routingKey: "ucourse.*",queue: "notification.course" },
+        { name: "course.events", routingKey: "course.*",queue: "notification.course" },
         { name: "payment.events", routingKey: "payment.*",queue: "notification.payment" },
 
     ]

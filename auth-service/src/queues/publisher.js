@@ -33,7 +33,7 @@ export async function publishUserRegisteredEvent(user) {
 
   channel.publish(
     "auth.events",
-    "user.registered",
+    "user.register",
     Buffer.from(JSON.stringify(event)),
     { persistent: true }
   );
