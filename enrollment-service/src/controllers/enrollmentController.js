@@ -51,7 +51,7 @@ export const getUserEnrollments = asyncHandler(async (req, res) => {
         `
         SELECT course_id, status, enrolled_at
         FROM enrollment
-        WHERE user_id = $1
+        WHERE user_id = $1 AND status = 'enrolled'
         `,
         [userId]
     );

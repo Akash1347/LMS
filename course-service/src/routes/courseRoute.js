@@ -2,7 +2,9 @@ import { requireRole } from "@akash1347/auth-lib";
 import { requireAuth } from "../config/auth.config.js";
 import { createCourse, deleteCourse, editCourse, getBulkCourseById, getCourseById, getCourses } from "../controllers/courseController.js";
 import { createModule, deleteModule, editModule, getModulesByCourseId } from "../controllers/moduleController.js";
-import { createLesson, deleteLesson, getLessonsByModuleId, createQuiz } from "../controllers/lessonController.js";
+import { createLesson, deleteLesson, getLessonsByModuleId,
+    createQuiz, editQuiz, editQuizQuestion, deleteQuiz, 
+    deleteQuizQuestion, getQuizById, getQuestionsByQuizId } from "../controllers/lessonController.js";
 import express from "express";
 const route = express.Router();
 
@@ -25,12 +27,21 @@ route.post('/:course_id/modules', requireAuth, requireRole("Instructor"), create
 route.get('/:course_id/modules', requireAuth, getModulesByCourseId);
 route.patch('/modules/:module_id', requireAuth, requireRole("Instructor"), editModule);
 route.delete('/modules/:module_id', requireAuth, requireRole("Instructor"), deleteModule);
-route.post('/modules/:module_id/quiz', requireAuth, requireRole("Instructor"), createQuiz);
 
 // Lessons
 route.post('/modules/:module_id/lessons', requireAuth, requireRole("Instructor"), ...createLesson);
 route.get('/modules/:module_id/lessons', requireAuth, getLessonsByModuleId);
 route.delete('/lessons/:lesson_id', requireAuth, requireRole("Instructor"), deleteLesson);
+
+//quiz edit
+//route.patch('/:course_id/quizzes/:quiz_id', requireAuth, requireRole("Instructor"), editQuiz);
+route.post('/modules/:module_id/quiz', requireAuth, requireRole("Instructor"), createQuiz);
+route.patch('/:course_id/quizzes/:quiz_id', requireAuth, requireRole("Instructor"), editQuiz);
+route.patch('/:course_id/quizzes/questions/:question_id', requireAuth, requireRole("Instructor"), editQuizQuestion);
+route.delete('/:course_id/quizzes/:quiz_id', requireAuth, requireRole("Instructor"), deleteQuiz);
+route.delete('/:course_id/quizzes/questions/:question_id', requireAuth, requireRole("Instructor"), deleteQuizQuestion);
+route.get('/quizzes/:quiz_id', requireAuth, getQuizById);
+route.get('/quizzes/:quiz_id/questions', requireAuth, getQuestionsByQuizId);
 
 
 // Backward compatible aliases (optional)

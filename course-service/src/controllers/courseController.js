@@ -1,6 +1,13 @@
-import pool from "../config/db.js";
 import asyncHandler from "../utils/async-handler.js";
 import { emitCoursePublished, emitCourseUpdated, emitCourseDeleted } from "../events/emitCoursePublished.js";
+import {
+    createCourseRepository,
+    deleteCourseRepository,
+    editCourseRepository,
+    getCoursesRepository,
+    getCourseByIdRepository,
+    getBulkCourseByIdRepository,
+} from "../repositories/course.repositories.js";
 
 
 export const createCourse = asyncHandler(async (req, res) => {
@@ -19,24 +26,16 @@ export const createCourse = asyncHandler(async (req, res) => {
     }
 
     const instructorId = req.user.sub;
-    const result = await pool.query(
-        `
-        INSERT INTO course
-        (title, description, category, level, language, instructor_id, price, currency)
-        VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
-        RETURNING *
-        `,
-        [
-            title,
-            description || "",
-            category ? `{${category}}` : null,
-            level,
-            language ? `{${language}}` : "{english}",
-            instructorId,
-            price || 0,
-            currency || "USD"
-        ]
-    );
+    const result = await createCourseRepository({
+        title,
+        description,
+        category,
+        level,
+        language,
+        instructorId,
+        price,
+        currency,
+    });
     const emittedCourseDat = {
         id: result.rows[0].id,
         status: result.rows[0].status,
@@ -58,12 +57,7 @@ export const deleteCourse = asyncHandler(async (req, res) => {
     if (!course_id) {
         return res.status(400).json({ success: false, message: "course_id is required" });
     }
-    const result = await pool.query(
-        `DELETE FROM course 
-        WHERE id = $1 AND instructor_id = $2
-        RETURNING id`,
-        [course_id, instructorId]
-    );
+    const result = await deleteCourseRepository({ course_id, instructorId });
     if (result.rows.length === 0) {
         return res.status(404).json({ success: false, message: "Course not found or you don't have permission to delete this course" });
     }
@@ -83,21 +77,17 @@ export const editCourse = asyncHandler(async (req, res) => {
     if (!course_id) {
         return res.status(400).json({ success: false, message: "course_id is required" });
     }
-    const result = await pool.query(
-        `
-        UPDATE course SET 
-            title = COALESCE($1, title),
-            description = COALESCE($2, description),
-            category = COALESCE($3, category),
-            level = COALESCE($4, level),
-            language = COALESCE($5, language),
-            price = COALESCE($6, price),
-            currency = COALESCE($7, currency)
-        WHERE id = $8 AND instructor_id = $9
-        RETURNING *
-        `,
-        [title, description, category ? `{${category}}` : null, level, language ? `{${language}}` : null, price, currency, course_id, instructorId]
-    );
+    const result = await editCourseRepository({
+        title,
+        description,
+        category,
+        level,
+        language,
+        price,
+        currency,
+        course_id,
+        instructorId,
+    });
     if (result.rows.length === 0) {
         return res.status(404).json({ success: false, message: "Course not found or you don't have permission to edit this course" });
     }
@@ -110,7 +100,7 @@ export const editCourse = asyncHandler(async (req, res) => {
 });
 
 export const getCourses = asyncHandler(async (req, res) => {
-    const result = await pool.query(`SELECT * FROM course`);
+    const result = await getCoursesRepository();
     return res.status(200).json({
         success: true,
         message: "Courses retrieved successfully",
@@ -120,7 +110,7 @@ export const getCourses = asyncHandler(async (req, res) => {
 
 export const getCourseById = asyncHandler(async (req, res) => {
     const { course_id } = req.params;
-    const result = await pool.query(`SELECT * FROM course WHERE id = $1`, [course_id]);
+    const result = await getCourseByIdRepository({ course_id });
     if (result.rows.length === 0) {
         return res.status(404).json({ success: false, message: "Course not found" });
     }
@@ -132,15 +122,21 @@ export const getCourseById = asyncHandler(async (req, res) => {
 });
 
 
-export const getBulkCourseById = asyncHandler(async(req, res) => {
-    const {course_ids} = req.body;
-    if(!course_ids || !Array.isArray(course_ids) || course_ids.length === 0) {
+export const getBulkCourseById = asyncHandler(async (req, res) => {
+    const bodyCourseIds = req.body?.course_ids;
+    const queryCourseIds = req.query?.course_ids;
+
+    let course_ids = bodyCourseIds;
+    if (!course_ids && queryCourseIds) {
+        course_ids = Array.isArray(queryCourseIds)
+            ? queryCourseIds
+            : String(queryCourseIds).split(",").map((id) => id.trim()).filter(Boolean);
+    }
+
+    if (!course_ids || !Array.isArray(course_ids) || course_ids.length === 0) {
         return res.status(400).json({ success: false, message: "course_ids must be a non-empty array" });
     }
-    const result = await pool.query(
-        `SELECT * FROM course WHERE id = ANY($1)`,
-        [course_ids]
-    );
+    const result = await getBulkCourseByIdRepository({ course_ids });
     return res.status(200).json({
         success: true,
         message: "Courses retrieved successfully",

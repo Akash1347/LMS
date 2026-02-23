@@ -1,8 +1,28 @@
-import pool from "../config/db.js";
 import { uploadToCloudinary } from "../config/cloudConfig.js";
 import { upload } from "../config/cloudConfig.js";
 import { v2 as cloudinary } from "cloudinary";
 import asyncHandler from "../utils/async-handler.js";
+import {
+    createLessonRepository,
+    deleteLessonRepository,
+    getLessonsByModuleIdRepository,
+    checkLessonOrderExistsRepository,
+    checkInstructorCanCreateQuizRepository,
+    beginLessonTransactionRepository,
+    commitLessonTransactionRepository,
+    rollbackLessonTransactionRepository,
+    createQuizRepository,
+    createQuestionsBulkRepository,
+    createQuizLessonMappingRepository,
+    editQuizRepository,
+    editQuizQuestionRepository,
+    deleteQuizRepository,
+    deleteQuizQuestionRepository,
+    getQuizByIdRepository,
+    getQuestionsByQuizIdRepository,
+
+} from "../repositories/lesson.repositories.js";
+import { getUserEnrolledCoursesRepository } from "../repositories/course.repositories.js";
 
 export const createLesson = [
     upload, // multer memory middleware
@@ -52,14 +72,7 @@ export const createLesson = [
         console.log("Cloudinary URL:", content_ref);
         console.log("Resource type:", resourceType);
 
-        const result = await pool.query(
-            `
-        INSERT INTO lesson (module_id, title, type, content_ref, order_index, public_id) 
-        VALUES ($1, $2, $3, $4, $5, $6)
-        RETURNING *
-        `,
-            [module_id, title, type, content_ref, order_index, publicId]
-        );
+        const result = await createLessonRepository({ module_id, title, type, content_ref, order_index, publicId });
 
         return res.status(201).json({
             success: true,
@@ -81,16 +94,7 @@ export const deleteLesson = asyncHandler(async (req, res) => {
         return res.status(401).json({ success: false, message: "Unauthorized" });
     }
     console.log(lesson_id, public_id, instructorId);
-    const result = await pool.query(
-        `DELETE FROM lesson l
-        USING module m, course c
-        WHERE l.module_id = m.id 
-        AND m.course_id = c.id
-        AND c.instructor_id = $1
-        AND l.id = $2
-        RETURNING l.id`,
-        [instructorId, lesson_id]
-    );
+    const result = await deleteLessonRepository({ instructorId, lesson_id });
     if (result.rows.length === 0) {
         return res.status(404).json({ success: false, message: "Lesson not found or you don't have permission to delete this lesson" });
     }
@@ -118,13 +122,7 @@ export const getLessonsByModuleId = asyncHandler(async (req, res) => {
     if (!module_id) {
         return res.status(400).json({ success: false, message: "module_id is required" });
     }
-    const result = await pool.query(
-        `SELECT id, title, type, content_ref, order_index 
-        FROM lesson
-        WHERE module_id = $1
-        ORDER BY order_index ASC`,
-        [module_id]
-    );
+    const result = await getLessonsByModuleIdRepository({ module_id });
     return res.status(200).json({
         success: true,
         message: "Lessons retrieved successfully",
@@ -133,97 +131,237 @@ export const getLessonsByModuleId = asyncHandler(async (req, res) => {
 });
 
 export const createQuiz = asyncHandler(async (req, res) => {
-    const { course_id, title, description, time_limit, total_marks } = req.body;
+    const { course_id, title, description, time_limit, total_marks, type } = req.body;
+    const module_id = req.params.module_id || req.body.module_id;
+    const { order_index } = req.body;
     const instructorId = req.user.sub;
 
-    if (!course_id || !title) {
-        return res.status(400).json({ success: false, message: "course_id and title are required" });
+    if (!course_id || !title || !module_id || !order_index) {
+        return res.status(400).json({ success: false, message: "course_id, module_id, title and order_index are required" });
     }
-    const isInstructorCanCreateQuiz = await pool.query(
-        `SELECT 1 FROM course WHERE id = $1 AND instructor_id = $2`,
-        [course_id, instructorId]
-    );
+
+    const existingOrder = await checkLessonOrderExistsRepository({ module_id, order_index });
+    if (existingOrder.rows.length > 0) {
+        return res.status(409).json({
+            success: false,
+            message: `Lesson with order_index ${order_index} already exists for this module. Please use a different order_index.`
+        });
+    }
+
+    const isInstructorCanCreateQuiz = await checkInstructorCanCreateQuizRepository({ course_id, instructorId });
 
     if (isInstructorCanCreateQuiz.rows.length === 0) {
         return res.status(403).json({ success: false, message: "You don't have permission to create quiz for this course" });
     }
+
+
     // start transaction
-    await pool.query("BEGIN");
+    await beginLessonTransactionRepository();
     try {
-        const quizResult = await pool.query(
-            `INSERT INTO quizzes (course_id, title, description, time_limit, total_marks) 
-            VALUES ($1, $2, $3, $4, $5)
-            RETURNING *`,
-            [course_id, title, description || "", time_limit || null, total_marks || 0]
-        );
+        const lessonType = type || "quiz";
+        const quizResult = await createQuizRepository({
+            course_id,
+            title,
+            description,
+            time_limit,
+            total_marks,
+        });
         const quizId = quizResult.rows[0].id;
 
-        // insert bulk questions
         const questions = req.body.questions || [];
-        const questionValues = [];
-        const questionPlaceholders = [];
+        await createQuestionsBulkRepository({ quizId, questions });
 
-        questions.forEach((q, index) => {
-            let parsedOptions = q.options || [];
+        //make lesson-quiz mapping 
 
-            if (typeof parsedOptions === "string") {
-                try {
-                    parsedOptions = JSON.parse(parsedOptions);
-                } catch (_err) {
-                    throw new Error(`Invalid JSON format for options at question index ${index}`);
-                }
-            }
-
-            const correctOptionId = q.correct_option_id || q.correct_answer_id || q.correct_answer;
-
-            if (!correctOptionId) {
-                throw new Error(`correct_option_id (or correct_answer_id) is required at question index ${index}`);
-            }
-
-            const baseIndex = index * 5;
-            questionPlaceholders.push(
-                `($${baseIndex + 1}, $${baseIndex + 2}, $${baseIndex + 3}, $${baseIndex + 4}, $${baseIndex + 5})`
-            );
-
-            questionValues.push(
-                quizId,
-                q.question_text,
-                JSON.stringify(parsedOptions),
-                correctOptionId,
-                q.marks || 0
-            );
+        let quizContentRef = `quiz:${quizId}`;
+        const quizMapping = await createQuizLessonMappingRepository({
+            module_id,
+            title,
+            type: lessonType,
+            quizContentRef,
+            time_limit,
+            order_index,
         });
 
-        if (questionValues.length > 0) {
-            await pool.query(
-                `INSERT INTO questions (quiz_id, question_text, options, correct_option_id, marks) 
-                    VALUES ${questionPlaceholders.join(", ")}`,
-                questionValues
-            );
-        }
+        await commitLessonTransactionRepository();
 
-        await pool.query("COMMIT");
+
         return res.status(201).json({
             success: true,
             message: "Quiz created successfully",
-            data: quizResult.rows[0]
+            data: { quiz: quizResult.rows[0], lesson: quizMapping.rows[0] }
         });
+
     } catch (error) {
-        await pool.query("ROLLBACK");
+        await rollbackLessonTransactionRepository();
         throw error;
     }
 }
 );
 
+export const deleteQuiz = asyncHandler(async (req, res) => {
+
+    const quiz_id = req.params.quiz_id;
+    const instructorId = req.user.sub;
+    const course_id = req.params.course_id;
+    if (!quiz_id) {
+        return res.status(400).json({ success: false, message: "quiz_id is required" });
+    }
+
+    const isInstructorCanCreateQuiz = await checkInstructorCanCreateQuizRepository({ course_id, instructorId });
+    if (isInstructorCanCreateQuiz.rows.length === 0) {
+        return res.status(403).json({ success: false, message: "You don't have permission to delete this quiz" });
+    }
+    const deleteQuizResult = await deleteQuizRepository({ quiz_id });
+    if (deleteQuizResult.rows.length === 0) {
+        return res.status(404).json({ success: false, message: "Quiz not found" });
+    }
+    return res.status(200).json({
+        success: true,
+        message: "Quiz deleted successfully",
+        data: deleteQuizResult.rows[0]
+    });
+});
+export const editQuiz = asyncHandler(async (req, res) => {
+    const quiz_id = req.params.quiz_id;
+    const { title, description, time_limit, total_marks } = req.body;
+    const instructorId = req.user.sub;
+    const course_id = req.params.course_id;
+    if (!quiz_id) {
+        return res.status(400).json({ success: false, message: "quiz_id is required" });
+    }
+    const isInstructorCanCreateQuiz = await checkInstructorCanCreateQuizRepository({ course_id, instructorId });
+    if (isInstructorCanCreateQuiz.rows.length === 0) {
+        return res.status(403).json({ success: false, message: "You don't have permission to edit this quiz" });
+    }
+    const editResult = await editQuizRepository({ quiz_id, title, description, time_limit, total_marks });
+    if (editResult.rows.length === 0) {
+        return res.status(404).json({ success: false, message: "Quiz not found" });
+    }
+    return res.status(200).json({
+        success: true,
+        message: "Quiz updated successfully",
+        data: editResult.rows[0]
+    });
+});
+
+export const getQuizById = asyncHandler(async (req, res) => {
+    const quiz_id = req.params.quiz_id;
+    if (!quiz_id) {
+        return res.status(400).json({ success: false, message: "quiz_id is required" });
+    };
+    const user_id = req.user.sub;
+    if (!user_id) {
+        return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+    // fetch quiz first
+    const quizResult = await getQuizByIdRepository({ quiz_id });
+    if (quizResult.rows.length === 0) {
+        return res.status(404).json({ success: false, message: "Quiz not found" });
+    }
+
+    const courseIdOfQuiz = quizResult.rows[0].course_id;
+
+    // allow instructor owner to access quiz directly
+    const isInstructorOwner = await checkInstructorCanCreateQuizRepository({
+        course_id: courseIdOfQuiz,
+        instructorId: user_id,
+    });
+    if (isInstructorOwner.rows.length > 0) {
+        return res.status(200).json({
+            success: true,
+            message: "Quiz retrieved successfully",
+            data: quizResult.rows[0]
+        });
+    }
+
+    let enrolledCourseIds = [];
+    try {
+        enrolledCourseIds = await getUserEnrolledCoursesRepository({ user_id });
+    } catch (_error) {
+        return res.status(503).json({
+            success: false,
+            message: "Unable to verify enrollment right now. Please try again."
+        });
+    }
+
+    if (!Array.isArray(enrolledCourseIds) || !enrolledCourseIds.includes(courseIdOfQuiz)) {
+        return res.status(403).json({ success: false, message: "You don't have permission to access this quiz" });
+    }
+    res.status(200).json({
+        success: true,
+        message: "Quiz retrieved successfully",
+        data: quizResult.rows[0]
+    });
+});
 
 
+export const editQuizQuestion = asyncHandler(async (req, res) => {
+    const { question_text, marks, options } = req.body;
+    const correct_option_id = req.body.correct_option_id || req.body.correct_answer_id || req.body.correct_answer;
+    const instructorId = req.user.sub;
+    const course_id = req.params.course_id;
+    const question_id = req.params.question_id;
+
+    console.log("Edit quiz request body:", req.body);
+    if (!question_id || !question_text || !options || !correct_option_id) {
+        return res.status(400).json({ success: false, message: "question_id, question_text, options and correct_option_id are required" });
+    }
+
+    let instructorCanEditQuiz = await checkInstructorCanCreateQuizRepository({ course_id, instructorId });
+
+    if (instructorCanEditQuiz.rows.length === 0) {
+        return res.status(403).json({ success: false, message: "You don't have permission to edit this quiz" });
+    }
+
+    const questionUpdate = await editQuizQuestionRepository({ question_id, question_text, marks, options, correct_option_id });
+
+    if (questionUpdate.rows.length === 0) {
+        return res.status(404).json({ success: false, message: "Question not found" });
+    }
+
+    return res.status(200).json({
+        success: true,
+        message: "Quiz question updated successfully",
+        data: questionUpdate.rows[0]
+    });
 
 
+})
+
+export const deleteQuizQuestion = asyncHandler(async (req, res) => {
+    const question_id = req.params.question_id;
+    const course_id = req.params.course_id;
+    const instructorId = req.user.sub;
+    if (!question_id) {
+        return res.status(400).json({ success: false, message: "question_id is required" });
+    }
+    const isInstructorCanEditQuiz = await checkInstructorCanCreateQuizRepository({ course_id, instructorId });
+    if (isInstructorCanEditQuiz.rows.length === 0) {
+        return res.status(403).json({ success: false, message: "You don't have permission to delete this question" });
+    }
+    const deleteResult = await deleteQuizQuestionRepository({ question_id });
+    if (deleteResult.rows.length === 0) {
+        return res.status(404).json({ success: false, message: "Question not found" });
+    }
+    return res.status(200).json({
+        success: true,
+        message: "Question deleted successfully",
+        data: deleteResult.rows[0]
+    });
+
+})
 
 
-
-
-
-
-
-
+export const getQuestionsByQuizId = asyncHandler(async (req, res) => {
+    const quiz_id = req.params.quiz_id;
+    if (!quiz_id) {
+        return res.status(400).json({ success: false, message: "quiz_id is required" });
+    }
+    const questionsResult = await getQuestionsByQuizIdRepository({ quiz_id });
+    return res.status(200).json({
+        success: true,
+        message: "Questions retrieved successfully",
+        data: questionsResult.rows
+    });
+}); 
