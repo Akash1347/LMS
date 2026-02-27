@@ -48,3 +48,4 @@ export const handleCoursePublished = async (msg, ) => {
         channel.nack(msg, false, !isDataError); 
     }
 };
+

@@ -81,12 +81,25 @@ export const getBulkCourseByIdRepository = async ({ course_ids }) => {
 };
 
 
-export const getUserEnrolledCoursesRepository = async ({ user_id }) => {
+export const getUserEnrolledCoursesRepository = async ({ authorization, course_id }) => {
+    
+    const result = await axios.get(
+        `${process.env.ENROLLMENT_SERVICE_URL}/api/enrollment/enrolled/${course_id}`,
+        {
+            headers: {
+                Authorization: authorization,
+            },
+        }
+    );
 
-    const result = await axios.get(`${process.env.ENROLLMENT_SERVICE_URL}/enrollments/user/${user_id}`);
-    const enrolledCourseIds = result.data.data.map(enrollment => enrollment.course_id);
-    return enrolledCourseIds;
-};   
+    return Boolean(result?.data?.data?.enrolled ?? result?.data?.enrolled);
+    
+
+    
+};
+
+
+
 
 
 

@@ -1,3 +1,4 @@
+import axios from "axios";
 import pool from "../config/db.js";
 
 export const createLessonRepository = async ({ module_id, title, type, content_ref, order_index, publicId }) => {
@@ -145,7 +146,7 @@ export const deleteQuizRepository = async ({ quiz_id }) => {
     );
 };
 
-export const deleteQuizQuestionRepository = async( { question_id }) => {
+export const deleteQuizQuestionRepository = async ({ question_id }) => {
     return pool.query(
         `DELETE FROM questions WHERE id = $1 RETURNING id`,
         [question_id]
@@ -154,18 +155,97 @@ export const deleteQuizQuestionRepository = async( { question_id }) => {
 
 export const getQuizByIdRepository = async ({ quiz_id }) => {
     return pool.query(
-        `SELECT id, course_id, title, description, time_limit, total_marks
+        `SELECT *
         FROM quizzes
         WHERE id = $1`,
         [quiz_id]
-        );
+    );
 };
 
 export const getQuestionsByQuizIdRepository = async ({ quiz_id }) => {
     return pool.query(
-        `SELECT id, question_text, options, correct_option_id, marks
-        FROM questions
-        WHERE quiz_id = $1`,
+        `SELECT q.id, q.question_text, q.options, q.correct_option_id, q.marks, z.course_id
+        FROM questions q
+        JOIN quizzes z ON z.id = q.quiz_id
+        WHERE q.quiz_id = $1`,
         [quiz_id]
     );
+};
+
+
+export const checkQuizBelongsToCourseRepository = async ({ quiz_id, course_id }) => {
+    return pool.query(
+        `SELECT 1 FROM quizzes WHERE id = $1 AND course_id = $2`,
+        [quiz_id, course_id]
+    );
+}
+
+export const startQuizAttemptRepository = async ({ quiz_id, user_id }) => {
+   
+
+    return pool.query(
+        `INSERT INTO quiz_attempts (quiz_id, student_id)
+        VALUES ($1, $2)
+        RETURNING *`,
+        [quiz_id, user_id]
+    );
+    
+}
+export const getQuizAttemptByIdRepository = async ({ attempt_id }) => {
+    return pool.query(
+        `SELECT * FROM quiz_attempts WHERE id = $1`,
+        [attempt_id]
+    );
+}
+//export const submitQuizAttemptRepository = async ({ attempt_id, score, answers }) => {
+
+export const getUserEnrolledCoursesRepository = async ({ course_id }) => {
+    const result = axios.get(`${process.env.ENROLLMENT_SERVICE_URL}/enrollments/enrolled/${course_id}`, {
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${process.env.ENROLLMENT_SERVICE_API_KEY}`
+        }
+    });
+    return result;
+
+}
+
+export const submitQuizAttemptRepository = async ({ attempt_id, studentAnswers, totalScore }) => {
+    await beginLessonTransactionRepository();
+    try{
+        console.log("transaction started for submitting quiz attempt");
+        console.log("Received student answers for attempt_id", attempt_id, studentAnswers);
+
+        if (studentAnswers.length === 0) {
+            await rollbackLessonTransactionRepository();
+            return { success: false, message: "No answers provided" };
+
+        }
+        const insertAnswers = await pool.query(
+            `INSERT INTO student_answers (attempt_id, question_id, selected_option_id, is_correct, marks_awarded) 
+            VALUES ${studentAnswers.map((_, index) => `($${index * 5 + 1}, $${index * 5 + 2}, $${index * 5 + 3}, $${index * 5 + 4}, $${index * 5 + 5})`).join(", ")}`,
+            studentAnswers.flatMap(ans => [ans.attempt_id, ans.question_id, ans.selected_option_id, ans.is_correct, ans.marks_awarded])
+        );
+
+        if (insertAnswers.rowCount === 0) {
+            await rollbackLessonTransactionRepository();
+            return { success: false, message: "Failed to save quiz answers" };
+        }
+        const result = await pool.query(
+            `UPDATE quiz_attempts SET score =  $1, status = 'submitted', submitted_at = NOW() WHERE id = $2 RETURNING *`,
+            [totalScore, attempt_id]
+        );
+        if(result.rowCount === 0) {
+            await rollbackLessonTransactionRepository();
+            return { success: false, message: "Failed to update quiz attempt with score" };
+        }
+
+        console.log("Quiz answers inserted successfully, now committing transaction");
+        await commitLessonTransactionRepository();
+        return { success: true, message: "Quiz answers submitted successfully", data: result.rows[0] };
+    } catch (error) {
+        console.error("Error submitting quiz attempt:", error);
+        await rollbackLessonTransactionRepository();
+        throw error;
+    }
 };

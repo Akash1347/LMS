@@ -33,3 +33,21 @@ export const deleteEnrollmentCourseSnapshot = async (data) => {
         [data.courseId]
     );
 };
+
+export const isUserEnrolledInCourse = async (userId, courseId) => {
+    const result = await pool.query(
+        `SELECT * FROM enrollment WHERE user_id = $1 AND course_id = $2 AND status = 'active'`,
+        [userId, courseId]
+    );
+    return result.rows.length > 0;
+};
+
+export const getUserEnrollmentsRepository = async (userId) => {
+    const result = await pool.query(
+        `SELECT course_id, status, enrolled_at
+        FROM enrollment
+        WHERE user_id = $1 AND status = 'active'`,
+        [userId]
+    );
+    return result.rows;
+};

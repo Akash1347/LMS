@@ -1,10 +1,12 @@
 import { requireRole } from "@akash1347/auth-lib";
 import { requireAuth } from "../config/auth.config.js";
-import { createCourse, deleteCourse, editCourse, getBulkCourseById, getCourseById, getCourses } from "../controllers/courseController.js";
-import { createModule, deleteModule, editModule, getModulesByCourseId } from "../controllers/moduleController.js";
+import { createCourse, deleteCourse, editCourse, getBulkCourseById, getCourseById, getCourses } from "../controllers/course.controller.js";
+import { createModule, deleteModule, editModule, getModulesByCourseId } from "../controllers/module.controller.js";
 import { createLesson, deleteLesson, getLessonsByModuleId,
     createQuiz, editQuiz, editQuizQuestion, deleteQuiz, 
-    deleteQuizQuestion, getQuizById, getQuestionsByQuizId } from "../controllers/lessonController.js";
+    deleteQuizQuestion, getQuizById, getQuestionsByQuizId } from "../controllers/lesson.controller.js";
+
+import { startQuiz, submitQuiz } from "../controllers/quiz.controller.js";
 import express from "express";
 const route = express.Router();
 
@@ -44,6 +46,11 @@ route.get('/quizzes/:quiz_id', requireAuth, getQuizById);
 route.get('/quizzes/:quiz_id/questions', requireAuth, getQuestionsByQuizId);
 
 
+//quiz attempt
+route.post('/:course_id/quizzes/:quiz_id/start', requireAuth, startQuiz);
+route.post('/quiz-attempts/:attempt_id', requireAuth, submitQuiz);
+
+
 // Backward compatible aliases (optional)
 route.post('/my_courses', requireAuth, getBulkCourseById);
 route.post('/module', requireAuth, requireRole("Instructor"), createModule);
@@ -53,6 +60,7 @@ route.post('/content', requireAuth, requireRole("Instructor"), ...createLesson);
 route.delete('/content', requireAuth, requireRole("Instructor"), deleteLesson);
 
 export default route;
+
 
 
 

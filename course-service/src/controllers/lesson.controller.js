@@ -251,8 +251,12 @@ export const getQuizById = asyncHandler(async (req, res) => {
         return res.status(400).json({ success: false, message: "quiz_id is required" });
     };
     const user_id = req.user.sub;
+    const authorization = req.headers.authorization;
     if (!user_id) {
         return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+    if (!authorization) {
+        return res.status(401).json({ success: false, message: "Authorization header missing" });
     }
     // fetch quiz first
     const quizResult = await getQuizByIdRepository({ quiz_id });
@@ -277,8 +281,9 @@ export const getQuizById = asyncHandler(async (req, res) => {
 
     let enrolledCourseIds = [];
     try {
-        enrolledCourseIds = await getUserEnrolledCoursesRepository({ user_id });
-    } catch (_error) {
+        enrolledCourseIds = await getUserEnrolledCoursesRepository({ authorization });
+    } catch (error) {
+        console.error("Enrollment verification failed in getQuizById:", error?.response?.status, error?.response?.data || error?.message);
         return res.status(503).json({
             success: false,
             message: "Unable to verify enrollment right now. Please try again."
@@ -355,10 +360,60 @@ export const deleteQuizQuestion = asyncHandler(async (req, res) => {
 
 export const getQuestionsByQuizId = asyncHandler(async (req, res) => {
     const quiz_id = req.params.quiz_id;
+    const user_id = req.user.sub;
+    const authorization = req.headers.authorization;
+    if (!user_id) {
+        return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+    if (!authorization) {
+        return res.status(401).json({ success: false, message: "Authorization header missing" });
+    }
     if (!quiz_id) {
         return res.status(400).json({ success: false, message: "quiz_id is required" });
     }
+
+
     const questionsResult = await getQuestionsByQuizIdRepository({ quiz_id });
+    if (questionsResult.rows.length === 0) {
+        return res.status(404).json({ success: false, message: "No questions found for this quiz" });
+    }
+
+    const courseIdOfQuiz = questionsResult.rows[0].course_id;
+
+    // allow instructor owner to access quiz questions directly
+    const isInstructorOwner = await checkInstructorCanCreateQuizRepository({
+        course_id: courseIdOfQuiz,
+        instructorId: user_id,
+    });
+    if (isInstructorOwner.rows.length > 0) {
+        return res.status(200).json({
+            success: true,
+            message: "Questions retrieved successfully",
+            data: questionsResult.rows
+        });
+    }
+
+      let enrolledCourseIds = [];
+    try {
+        enrolledCourseIds = await getUserEnrolledCoursesRepository({ authorization });
+    } catch (error) {
+        console.error("Enrollment verification failed in getQuestionsByQuizId:", error?.response?.status, error?.response?.data || error?.message);
+        const status = error?.response?.status;
+        if (status === 401 || status === 403) {
+            return res.status(403).json({ success: false, message: "You don't have permission to access these questions" });
+        }
+        return res.status(503).json({
+            success: false,
+            message: "Unable to verify enrollment right now. Please try again."
+        });
+    }
+
+    if (!Array.isArray(enrolledCourseIds) || !enrolledCourseIds.includes(courseIdOfQuiz)) {
+        return res.status(403).json({ success: false, message: "You don't have permission to access these questions" });
+    }   
+    
+
+
     return res.status(200).json({
         success: true,
         message: "Questions retrieved successfully",
