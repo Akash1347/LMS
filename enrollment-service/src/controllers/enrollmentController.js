@@ -93,3 +93,20 @@ export const UserEnrolledInCourse = asyncHandler(async (req, res) => {
         }
     });
 });
+
+
+export const getCourseAnalytics = asyncHandler(async (req, res) => {
+    const courseId = req.params.courseId;
+    const instructorId = req.user.sub;
+
+    const getAnalytics = await pool.query(
+        `SELECT COUNT(*) as enrolled_students FROM enrollment WHERE course_id = $1 AND status = 'active'`,
+        [courseId]
+    );
+        
+    if(getAnalytics.rows.length === 0) {
+        return res.status(404).json({ message: 'No analytics found for this course' });
+    }
+
+    return res.status(200).json(getAnalytics.rows[0]);
+});

@@ -7,6 +7,7 @@ import { createLesson, deleteLesson, getLessonsByModuleId,
     deleteQuizQuestion, getQuizById, getQuestionsByQuizId } from "../controllers/lesson.controller.js";
 
 import { startQuiz, submitQuiz } from "../controllers/quiz.controller.js";
+import { getInstructorCourse, getQuizAnalytics, getDetailedQuizAnalytics } from "../controllers/analytics.controller.js";
 import express from "express";
 const route = express.Router();
 
@@ -49,6 +50,15 @@ route.get('/quizzes/:quiz_id/questions', requireAuth, getQuestionsByQuizId);
 //quiz attempt
 route.post('/:course_id/quizzes/:quiz_id/start', requireAuth, startQuiz);
 route.post('/quiz-attempts/:attempt_id', requireAuth, submitQuiz);
+route.get('/quiz/:quiz_id/analytics', requireAuth, getDetailedQuizAnalytics);
+
+//analytics
+route.get('/instructor/courses', requireAuth, requireRole("Instructor"), getInstructorCourse);
+//route.get('/:course_id/analytics', requireAuth, requireRole("Instructor"), getCourseAnalytics);
+
+//quizz
+route.get('/quizzes/:quiz_id/analytics', requireAuth, getQuizAnalytics);
+
 
 
 // Backward compatible aliases (optional)
