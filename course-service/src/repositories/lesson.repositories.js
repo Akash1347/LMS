@@ -1,5 +1,5 @@
 import axios from "axios";
-import pool from "../config/db.js";
+import pool from "../config/db.config.js";
 
 export const createLessonRepository = async ({ module_id, title, type, content_ref, order_index, publicId }) => {
     return pool.query(

@@ -1,4 +1,4 @@
-import { getChannel } from "../config/rabbitMqConfig.js";
+import { getChannel } from "../config/rabbitMq.config.js";
 
 export async function emitCoursePublished(course){
     const channel = getChannel();
@@ -18,7 +18,7 @@ export async function emitCoursePublished(course){
 export async function emitCourseUpdated(course) {
     const channel = getChannel();
     const exchange = "course.events";
-    const routingKey = "course.updated";
+    const routingKey = "course.updated"
     const event = {
         type: "COURSE_UPDATED",
         data: course
@@ -42,5 +42,6 @@ export async function emitCourseDeleted(courseId) {
     });
     console.log(`Published event to ${routingKey}`);
 };
+
 
 

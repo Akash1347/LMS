@@ -1,5 +1,5 @@
 import asyncHandler from '../utils/async-handler.js';
-import pool from '../config/db.js';
+import pool from '../config/db.config.js';
 
 export const getInstructorCourse = asyncHandler(async (req, res) => {
     const instructorId = req.user.sub;

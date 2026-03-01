@@ -1,5 +1,5 @@
-import { uploadToCloudinary } from "../config/cloudConfig.js";
-import { upload } from "../config/cloudConfig.js";
+import { uploadToCloudinary } from "../config/cloud.config.js";
+import { upload } from "../config/cloud.config.js";
 import { v2 as cloudinary } from "cloudinary";
 import asyncHandler from "../utils/async-handler.js";
 import {

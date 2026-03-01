@@ -1,4 +1,4 @@
-import pool from "../config/db.js";
+import pool from "../config/db.config.js";
 
 export const checkInstructorOwnsCourseForModuleRepository = async ({ course_id, instructorId }) => {
     return pool.query(`SELECT id FROM course WHERE id = $1 AND instructor_id = $2`, [course_id, instructorId]);

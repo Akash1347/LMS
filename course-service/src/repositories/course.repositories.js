@@ -1,4 +1,4 @@
-import pool from "../config/db.js";
+import pool from "../config/db.config.js";
 import axios from "axios";
 
 export const createCourseRepository = async ({
@@ -97,6 +97,7 @@ export const getUserEnrolledCoursesRepository = async ({ authorization, course_i
 
     
 };
+
 
 
 

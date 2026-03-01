@@ -1,30 +1,66 @@
-import "./config/env.js"
+import "./config/env.config.js"
 import express from "express";
 
 import courseRoutes from "./routes/courseRoute.js";
-import { connectRabbitMq } from "./config/rabbitMqConfig.js";
+import { connectRabbitMq } from "./config/rabbitMq.config.js";
+import logger from "./config/logger.config.js";
+import env from "./config/env.config.js";
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = env.PORT || 3001;
 
-// Add middleware to parse JSON bodies with error handling
-app.use(express.json({
-    limit: '10mb',
-    strict: true
-}));
+ 
+app.use(express.json({limit: '10mb',strict: true}));
+app.use(express.urlencoded({ extended: true, limit: '10mb'}));
 
-// Add middleware to parse URL-encoded bodies (for form data)
-app.use(express.urlencoded({
-    extended: true,
-    limit: '10mb'
-}));
+app.use((req, res, next) => {
+    const start = Date.now();
+    res.on("finish", () => {
+        const duration = Date.now() - start;
+        logger.info({
+            event: "http_request",
+            method: req.method,
+            url: req.originalUrl,
+            status: res.statusCode,
+            durationMs: `${duration}ms`,
+            ip: req.ip,
+        });
+    });
+    next();
+});
+
+await connectRabbitMq().
+then(() => {
+    logger.info({
+        event: "rabbitmq_connected",
+        url: env.RABBITMQ_URL,
+    });
+})
+.catch((err) => {
+    logger.error({
+        event: "rabbitmq_connection_error",
+        url: env.RABBITMQ_URL,
+        message: err.message,
+        stack: err.stack,
+    });
+    process.exit(1);
+});
+
+
+
+app.get("/health", (req, res) => {
+    res.status(200).json({ status: "OK" });
+});
+
+app.use('/api/course', courseRoutes);
+
 
 // Global error handler for JSON parsing errors
 app.use((err, req, res, next) => {
     if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
-        console.error("JSON parsing error details:", {
+        logger.error({
+            event: "json_parse_error",
             url: req.url,
             method: req.method,
-            body: req.body,
             error: err.message,
             position: err.position
         });
@@ -35,17 +71,26 @@ app.use((err, req, res, next) => {
             details: "Please check your JSON syntax and ensure it's properly formatted"
         });
     }
+    logger.error({
+        event: "unhandled_error",
+        method: req?.method,
+        url: req?.originalUrl,
+        error: err?.message,
+        stack: err?.stack,
+    });
+    res.status(500).json({
+        success: false,
+        message: "Internal server error",
+    });
     next();
 });
 
-
-await connectRabbitMq();
-app.get("/", (req, res) => {
-    res.send("Course Service - Hello World!");
-});
-
-app.use('/api/course', courseRoutes);
-
 app.listen(PORT, () => {
-    console.log(`Course service running on port ${PORT}`);
+    logger.info({
+        event: "server_started",
+        port: PORT,
+        nodeEnv: env.NODE_ENV || "development",
+
+
+    });
 });
