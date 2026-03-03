@@ -6,7 +6,7 @@ import { getUserEnrolledCoursesRepository } from "../repositories/course.reposit
 export const startQuiz = asyncHandler(async (req, res) => {
 
     const quiz_id = req.params.quiz_id;
-    const user_id = req.user.sub;
+    const user_id = req.headers['x-user-id'];
     const course_id = req.params.course_id;
     const authorization = req.headers.authorization;
     if (!quiz_id) {
@@ -63,7 +63,11 @@ export const startQuiz = asyncHandler(async (req, res) => {
 
     let isUserEnrolled = false;
     try {
-        isUserEnrolled = await getUserEnrolledCoursesRepository({ authorization, course_id });
+        isUserEnrolled = await getUserEnrolledCoursesRepository({
+            authorization,
+            course_id,
+            user_id,
+        });
     } catch (error) {
         const status = error?.response?.status;
         if (status === 401 || status === 403) {
@@ -102,8 +106,14 @@ export const startQuiz = asyncHandler(async (req, res) => {
 
 export const submitQuiz = asyncHandler(async(req, res) => {
     
-    const user_id = req.user.sub;
+    const user_id = req.headers['x-user-id'];
     const attempt_id = req.params.attempt_id;
+    if (!user_id) {
+        return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+    if (!attempt_id) {
+        return res.status(400).json({ success: false, message: "attempt_id is required" });
+    }
 
     const answer = req.body.answer;
     console.log("Received request to submit quiz attempt with attempt_id", attempt_id, "and answer", answer);
@@ -124,11 +134,19 @@ export const submitQuiz = asyncHandler(async(req, res) => {
     }
     const studentAnswers = [];
     let totalScore = 0;
-    quizQuestions.rows.forEach((question) => {
+    for (const question of quizQuestions.rows) {
         const questionId = question.id;
         const allcatedMarks = question.marks;
         const correctOptionId = question.correct_option_id;
         const studentOptionId = answer[questionId];
+
+        if (!studentOptionId) {
+            return res.status(400).json({
+                success: false,
+                message: `Missing answer for question ${questionId}`,
+            });
+        }
+
         const isCorrect = studentOptionId === correctOptionId;
         studentAnswers.push({
             attempt_id,
@@ -140,7 +158,7 @@ export const submitQuiz = asyncHandler(async(req, res) => {
         if (isCorrect) {
             totalScore += allcatedMarks;
         }
-    });
+    }
     console.log("Calculated total score for quiz attempt:", totalScore);
 
     const submitQuizAttempt = await submitQuizAttemptRepository({ attempt_id, studentAnswers, totalScore });

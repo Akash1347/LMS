@@ -10,9 +10,9 @@ const PORT = process.env.PORT || 3000;
 app.use(express.static('public'));
 app.use(express.json());
 import authRoutes from './routes/authRoute.js';
-import userRoutes from './routes/userRoute.js';
+ 
 import path from 'path';
-import { getJwks } from './controllers/jwksController.js';
+ 
 import { connectRabbitMq } from './config/rabbitmq.js';
 
 connectRabbitMq();
@@ -22,10 +22,9 @@ app.get('/', async (req, res) => {
     console.log(data.rows);
     //console.log(privateKey , publicKey);
     res.send('Auth Service is running');
-})
-app.get('/.well-known/jwks.json', getJwks);
+}) 
 app.use('/api/auth', authRoutes);
-app.use('/api/user', userRoutes);
+ 
 
 app.listen(PORT, () => {
     console.log(`Auth Service is running on port ${PORT}`);

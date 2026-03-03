@@ -26,11 +26,19 @@ export const updateEnrollmentCourseSnapshot = async (data) => {
     return result.rows[0];
 };
 
-export const deleteEnrollmentCourseSnapshot = async (data) => {
-    
+export const deleteEnrollmentCourseSnapshot = async (courseIdOrData) => {
+    const courseId =
+        typeof courseIdOrData === "string"
+            ? courseIdOrData
+            : courseIdOrData?.courseId || courseIdOrData?.course_id || courseIdOrData?.id;
+
+    if (!courseId) {
+        throw new Error("courseId is required to delete course snapshot");
+    }
+
     await pool.query(
         `DELETE FROM course_enrollment_snapshot WHERE course_id = $1`,
-        [data.courseId]
+        [courseId]
     );
 };
 

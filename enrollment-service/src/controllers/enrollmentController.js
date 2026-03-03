@@ -5,7 +5,8 @@ import { insertEnrollment, insertEnrollmentCourseSnapshot, updateEnrollmentCours
 
  
 export const getUserEnrollments = asyncHandler(async (req, res) => {
-    const userId = req.user.sub;
+    const userId = req.headers['x-user-id'];
+
     logger.info({ event: "fetch_user_enrollments", userId });
     const result = await getUserEnrollmentsRepository(userId);
     res.status(200).json({
@@ -17,7 +18,7 @@ export const getUserEnrollments = asyncHandler(async (req, res) => {
 
 export const enrollInCourse = asyncHandler(async(req, res) => {
     const {courseId} = req.body;
-    const userId = req.user.sub;
+    const userId = req.headers['x-user-id'];
     logger.info({ event: "enrollment_request_received", userId, courseId });
      
     if(!courseId) {
@@ -83,7 +84,7 @@ export const enrollInCourse = asyncHandler(async(req, res) => {
 
 
 export const UserEnrolledInCourse = asyncHandler(async (req, res) => {
-    const userId = req.user.sub;
+    const userId = req.headers['x-user-id'];
     const courseId = req.params.courseId;
     if (!courseId) {
         logger.warn({ event: "enrollment_check_rejected", reason: "missing_course_id", userId });
@@ -105,7 +106,7 @@ export const UserEnrolledInCourse = asyncHandler(async (req, res) => {
 
 export const getCourseAnalytics = asyncHandler(async (req, res) => {
     const courseId = req.params.courseId;
-    const instructorId = req.user.sub;
+    const instructorId = req.headers['x-user-id'];
     logger.info({ event: "fetch_course_enrollment_analytics", courseId, instructorId });
 
     const getAnalytics = await pool.query(

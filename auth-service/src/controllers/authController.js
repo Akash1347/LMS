@@ -4,6 +4,10 @@ import { generateToken } from "../utils/generateToken.js";
 import { publishEvent } from "../queues/publisher.js";
 import jwt from "jsonwebtoken";
 
+const getRequesterUserId = (req) => {
+    return req.headers['x-user-id'] || req.userId || req.user?.sub;
+};
+
 export const registerUser = async (req, res) => {
     const { username, email, password, role } = req.body;
 
@@ -15,31 +19,24 @@ export const registerUser = async (req, res) => {
         if (existingUser.rows.length > 0) {
             return res.status(409).json({ success: false, message: 'User already exists' });
         }
+
         const hashedPassword = await bcrypt.hash(password, 10);
-        await pool.query('INSERT INTO users (user_name, email, password_hash, role) VALUES ($1, $2, $3, $4)', [username, email, hashedPassword, role]);
+        await pool.query(
+            'INSERT INTO users (user_name, email, password_hash, role) VALUES ($1, $2, $3, $4)',
+            [username, email, hashedPassword, role]
+        );
 
         const userData = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
         const user = userData.rows[0];
         const token = generateToken(user);
         res.setHeader('Authorization', `Bearer ${token}`);
-        // res.cookie('token', token, { 
-        //     httpOnly: true, 
-        //     secure: process.env.NODE_ENV === 'production',
-        // sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax',
-        //     maxAge: 24 * 60 * 60 * 1000 
-        // });
-        // await publishEvent("user.created" ,{
-        //     email: user.email,
-        //     name: user.name
-        // });
-        //publishUserRegisteredEvent(user);
-        publishEvent("user.register", "USER_REGISTERED",
-            {
-                userId: user.user_id,
-                email: user.email,
-                name: user.user_name
-            }
-        )
+
+        publishEvent("user.register", "USER_REGISTERED", {
+            userId: user.user_id,
+            email: user.email,
+            name: user.user_name
+        });
+
         return res.status(201).json({ success: true, message: 'User registered successfully' });
     } catch (error) {
         console.error(error);
@@ -49,19 +46,23 @@ export const registerUser = async (req, res) => {
 
 export const loginUser = async (req, res) => {
     const { email, password } = req.body;
+
     if (!email || !password) {
         return res.status(400).json({ success: false, message: 'Email and password are required' });
     }
+
     try {
         const userData = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
         if (userData.rows.length === 0) {
             return res.status(401).json({ success: false, message: 'Invalid email or password' });
         }
+
         const user = userData.rows[0];
         const isMatch = await bcrypt.compare(password, user.password_hash);
         if (!isMatch) {
             return res.status(401).json({ success: false, message: 'Invalid email or password' });
         }
+
         const token = generateToken(user);
         res.setHeader('Authorization', `Bearer ${token}`);
         return res.status(200).json({ success: true, message: 'Login successful' });
@@ -72,14 +73,25 @@ export const loginUser = async (req, res) => {
 }
 
 export const getDetails = async (req, res) => {
-    if (!req.userId) {
+    const userId = getRequesterUserId(req);
+    if (!userId) {
         return res.status(401).json({ success: false, message: 'Unauthorized' });
     }
+
     try {
-        const userData = await pool.query('SELECT user_id, user_name, email, role, is_account_verified FROM users WHERE user_id = $1', [req.userId]);
+        const userData = await pool.query(
+            'SELECT user_id, user_name, email, role, is_account_verified FROM users WHERE user_id = $1',
+            [userId]
+        );
+
+        if (userData.rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+
         const user = userData.rows[0];
         return res.status(200).json({
-            success: true, userData: {
+            success: true,
+            userData: {
                 user_id: user.user_id,
                 user_name: user.user_name,
                 email: user.email,
@@ -94,7 +106,6 @@ export const getDetails = async (req, res) => {
 }
 
 export const logoutUser = async (req, res) => {
-
     if (!req.headers['authorization']) {
         return res.status(401).json({ success: false, message: 'Unauthorized' });
     }
@@ -104,22 +115,29 @@ export const logoutUser = async (req, res) => {
 
 export const changePassword = async (req, res) => {
     const { oldPassword, newPassword } = req.body;
+    const userId = req.headers['x-user-id'];
 
-    if (!req.userId) {
+    if (!userId) {
         return res.status(401).json({ success: false, message: 'Unauthorized' });
     }
     if (!oldPassword || !newPassword) {
         return res.status(400).json({ success: false, message: 'Old and new passwords are required' });
     }
+
     try {
-        const userData = await pool.query('SELECT * FROM users WHERE user_id = $1', [req.userId]);
+        const userData = await pool.query('SELECT * FROM users WHERE user_id = $1', [userId]);
+        if (userData.rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+
         const user = userData.rows[0];
         const isMatch = await bcrypt.compare(oldPassword, user.password_hash);
         if (!isMatch) {
             return res.status(401).json({ success: false, message: 'Old password is incorrect' });
         }
+
         const hashedPassword = await bcrypt.hash(newPassword, 10);
-        await pool.query('UPDATE users SET password_hash = $1 WHERE user_id = $2', [hashedPassword, req.userId]);
+        await pool.query('UPDATE users SET password_hash = $1 WHERE user_id = $2', [hashedPassword, userId]);
         return res.status(200).json({ success: true, message: 'Password changed successfully' });
     } catch (error) {
         console.error(error);
@@ -138,22 +156,19 @@ export const forgotPassword = async (req, res) => {
         if (userData.rows.length === 0) {
             return res.status(404).json({ success: false, message: 'User not found' });
         }
-        const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes from now
+
+        const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
         const otp = Math.floor(100000 + Math.random() * 900000);
         await pool.query('UPDATE users SET reset_otp_expires_at = $1, reset_otp = $2 WHERE email = $3', [expiresAt, otp, email]);
 
-        //event send-notification for user to reset password from notification service 
-
         await publishEvent("user.resetOtp", "USER_RESET_OTP", {
             user_id: userData.rows[0].user_id,
-            email: email,
-            otp: otp,
-            expiresAt: expiresAt
+            email,
+            otp,
+            expiresAt
         });
 
-        return res.status(200).json({ success: true, message: 'OTP sent to email', data: { expiresAt, otp } });
-
-
+        return res.status(200).json({ success: true, message: 'OTP sent to email' });
     } catch (error) {
         console.error(error);
         return res.status(500).json({ success: false, message: 'Internal server error' });
@@ -165,11 +180,13 @@ export const verifyResetOtp = async (req, res) => {
     if (!email || !otp || !newPassword) {
         return res.status(400).json({ success: false, message: 'Email, OTP, and new password are required' });
     }
+
     try {
         const userData = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
         if (userData.rows.length === 0) {
             return res.status(404).json({ success: false, message: 'User not found' });
         }
+
         const user = userData.rows[0];
         if (!user.reset_otp_expires_at || Date.now() > new Date(user.reset_otp_expires_at).getTime()) {
             return res.status(400).json({ success: false, message: 'OTP has expired' });
@@ -177,8 +194,12 @@ export const verifyResetOtp = async (req, res) => {
         if (!user.reset_otp || user.reset_otp != otp) {
             return res.status(400).json({ success: false, message: 'Invalid OTP' });
         }
+
         const hashedPassword = await bcrypt.hash(newPassword, 10);
-        await pool.query('UPDATE users SET password_hash = $1, reset_otp = $2, reset_otp_expires_at = $3 WHERE email = $4', [hashedPassword, null, null, email]);
+        await pool.query(
+            'UPDATE users SET password_hash = $1, reset_otp = $2, reset_otp_expires_at = $3 WHERE email = $4',
+            [hashedPassword, null, null, email]
+        );
         return res.status(200).json({ success: true, message: 'Password reset successfully' });
     } catch (error) {
         console.error(error);
@@ -187,28 +208,34 @@ export const verifyResetOtp = async (req, res) => {
 }
 
 export const sendVerificationOtp = async (req, res) => {
-    if (!req.userId) {
+    const userId = getRequesterUserId(req);
+    if (!userId) {
         return res.status(401).json({ success: false, message: 'Unauthorized' });
     }
+
     try {
-        const userData = await pool.query('SELECT * FROM users WHERE user_id = $1', [req.userId]);
+        const userData = await pool.query('SELECT * FROM users WHERE user_id = $1', [userId]);
+        if (userData.rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+
         const user = userData.rows[0];
         if (user.is_account_verified) {
             return res.status(400).json({ success: false, message: 'Account already verified' });
         }
-        const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes from now
-        const otp = Math.floor(100000 + Math.random() * 900000);
-        await pool.query('UPDATE users SET verify_otp_expires_at = $1, verify_otp = $2 WHERE user_id = $3', [expiresAt, otp, req.userId]);
 
-        //event send-notification for user to verify account from notification service
+        const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+        const otp = Math.floor(100000 + Math.random() * 900000);
+        await pool.query('UPDATE users SET verify_otp_expires_at = $1, verify_otp = $2 WHERE user_id = $3', [expiresAt, otp, userId]);
+
         await publishEvent("user.VerifyOtp", "USER_VERIFY_OTP", {
             user_id: user.user_id,
             email: user.email,
-            otp: otp,
-            expiresAt: expiresAt
-        })
+            otp,
+            expiresAt
+        });
 
-        return res.status(200).json({ success: true, message: 'Verification OTP sent to email', data: { otp: otp, expiresAt: expiresAt } });
+        return res.status(200).json({ success: true, message: 'Verification OTP sent to email'});
     } catch (error) {
         console.error(error);
         return res.status(500).json({ success: false, message: 'Internal server error' });
@@ -217,14 +244,21 @@ export const sendVerificationOtp = async (req, res) => {
 
 export const verifyOtp = async (req, res) => {
     const { otp } = req.body;
+    const userId = getRequesterUserId(req);
+
     if (!otp) {
         return res.status(400).json({ success: false, message: 'OTP is required' });
     }
-    if (!req.userId) {
+    if (!userId) {
         return res.status(401).json({ success: false, message: 'Unauthorized' });
     }
+
     try {
-        const userData = await pool.query('SELECT * FROM users WHERE user_id = $1', [req.userId]);
+        const userData = await pool.query('SELECT * FROM users WHERE user_id = $1', [userId]);
+        if (userData.rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+
         const user = userData.rows[0];
         if (user.is_account_verified) {
             return res.status(400).json({ success: false, message: 'Account already verified' });
@@ -235,7 +269,11 @@ export const verifyOtp = async (req, res) => {
         if (!user.verify_otp || user.verify_otp != otp) {
             return res.status(400).json({ success: false, message: 'Invalid OTP' });
         }
-        await pool.query('UPDATE users SET is_account_verified = $1, verify_otp = $2, verify_otp_expires_at = $3 WHERE user_id = $4', [true, null, null, req.userId]);
+
+        await pool.query(
+            'UPDATE users SET is_account_verified = $1, verify_otp = $2, verify_otp_expires_at = $3 WHERE user_id = $4',
+            [true, null, null, userId]
+        );
         return res.status(200).json({ success: true, message: 'Account verified successfully' });
     } catch (error) {
         console.error(error);
@@ -244,65 +282,11 @@ export const verifyOtp = async (req, res) => {
 }
 
 export const isAuthenticated = async (req, res) => {
-    try {
-        return res.json({ success: true, message: "User Authenticated" });
-    } catch (err) {
-        return res.json({ success: false, message: err.message });
-
-    }
-}
-
-export const authWithJwtRegister = async (req, res) => {
-    const { email, username, password, role } = req.body;
-    console.log(req.body);
-    if (!email || !username || !password || !role) {
-        return res.status(400).json({ success: false, message: 'Email, username, password and role are required' });
-    }
-    try {
-        const existingUser = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
-        if (existingUser.rows.length > 0) {
-            return res.status(409).json({ success: false, message: 'User already exists' });
-        }
-        const hashedPassword = await bcrypt.hash(password, 10);
-        const result = await pool.query('INSERT INTO users (user_name, email, password_hash, role) VALUES ($1, $2, $3, $4) RETURNING *', [username, email, hashedPassword, role]);
-        const token = jwt.sign({
-            sub: result.rows[0].user_id,
-            name: result.rows[0].user_name,
-            email: result.rows[0].email,
-            role: result.rows[0].role
-        }, "jnsi2udnbhdjnwk", { expiresIn: '1h' });
-        res.setHeader('Authorization', `Bearer ${token}`);
-        return res.status(201).json({ success: true, message: 'User registered successfully', token });
-    } catch (error) {
-        console.error(error);
-        return res.status(500).json({ success: false, message: 'Internal server error' });
-    }
-}
-
-export const getUserDetailsForJwt = async (req, res) => {
-    const forwardedUserId = req.headers['x-user-id'];
-    const userId = forwardedUserId || req.userId || req.user?.sub;
-    if(!userId) {
+    const userId = getRequesterUserId(req);
+    if (!userId) {
         return res.status(401).json({ success: false, message: 'Unauthorized' });
     }
-    try {
-        const userData = await pool.query('SELECT user_id, user_name, email, role FROM users WHERE user_id = $1', [userId]);
-        if (userData.rows.length === 0) {
-            return res.status(404).json({ success: false, message: 'User not found' });
-        }
-        const user = userData.rows[0];
-        return res.status(200).json({
-            success: true, userData: {
-                user_id: user.user_id,
-                user_name: user.user_name,
-                email: user.email,
-                role: user.role
-            }
-        });
-    }
-    catch (error) {
-        console.error(error);
-        return res.status(500).json({ success: false, message: 'Internal server error' });
-    }
+    return res.status(200).json({ success: true, message: 'Authenticated' });
 }
-    
+
+ 

@@ -89,7 +89,7 @@ export const deleteLesson = asyncHandler(async (req, res) => {
     if (!lesson_id || !public_id) {
         return res.status(400).json({ success: false, message: "lesson_id and public_id are required" });
     }
-    const instructorId = req.user.sub;
+    const instructorId = req.headers['x-user-id'];
     if (!instructorId) {
         return res.status(401).json({ success: false, message: "Unauthorized" });
     }
@@ -134,7 +134,7 @@ export const createQuiz = asyncHandler(async (req, res) => {
     const { course_id, title, description, time_limit, total_marks, type } = req.body;
     const module_id = req.params.module_id || req.body.module_id;
     const { order_index } = req.body;
-    const instructorId = req.user.sub;
+    const instructorId = req.headers['x-user-id'];
 
     if (!course_id || !title || !module_id || !order_index) {
         return res.status(400).json({ success: false, message: "course_id, module_id, title and order_index are required" });
@@ -202,7 +202,7 @@ export const createQuiz = asyncHandler(async (req, res) => {
 export const deleteQuiz = asyncHandler(async (req, res) => {
 
     const quiz_id = req.params.quiz_id;
-    const instructorId = req.user.sub;
+    const instructorId = req.headers['x-user-id'];
     const course_id = req.params.course_id;
     if (!quiz_id) {
         return res.status(400).json({ success: false, message: "quiz_id is required" });
@@ -225,7 +225,7 @@ export const deleteQuiz = asyncHandler(async (req, res) => {
 export const editQuiz = asyncHandler(async (req, res) => {
     const quiz_id = req.params.quiz_id;
     const { title, description, time_limit, total_marks } = req.body;
-    const instructorId = req.user.sub;
+    const instructorId = req.headers['x-user-id'];
     const course_id = req.params.course_id;
     if (!quiz_id) {
         return res.status(400).json({ success: false, message: "quiz_id is required" });
@@ -250,7 +250,7 @@ export const getQuizById = asyncHandler(async (req, res) => {
     if (!quiz_id) {
         return res.status(400).json({ success: false, message: "quiz_id is required" });
     };
-    const user_id = req.user.sub;
+    const user_id = req.headers['x-user-id'];
     const authorization = req.headers.authorization;
     if (!user_id) {
         return res.status(401).json({ success: false, message: "Unauthorized" });
@@ -304,7 +304,7 @@ export const getQuizById = asyncHandler(async (req, res) => {
 export const editQuizQuestion = asyncHandler(async (req, res) => {
     const { question_text, marks, options } = req.body;
     const correct_option_id = req.body.correct_option_id || req.body.correct_answer_id || req.body.correct_answer;
-    const instructorId = req.user.sub;
+    const instructorId = req.headers['x-user-id'];
     const course_id = req.params.course_id;
     const question_id = req.params.question_id;
 
@@ -337,7 +337,7 @@ export const editQuizQuestion = asyncHandler(async (req, res) => {
 export const deleteQuizQuestion = asyncHandler(async (req, res) => {
     const question_id = req.params.question_id;
     const course_id = req.params.course_id;
-    const instructorId = req.user.sub;
+    const instructorId = req.headers['x-user-id'];
     if (!question_id) {
         return res.status(400).json({ success: false, message: "question_id is required" });
     }
@@ -360,7 +360,7 @@ export const deleteQuizQuestion = asyncHandler(async (req, res) => {
 
 export const getQuestionsByQuizId = asyncHandler(async (req, res) => {
     const quiz_id = req.params.quiz_id;
-    const user_id = req.user.sub;
+    const user_id = req.headers['x-user-id'];
     const authorization = req.headers.authorization;
     if (!user_id) {
         return res.status(401).json({ success: false, message: "Unauthorized" });

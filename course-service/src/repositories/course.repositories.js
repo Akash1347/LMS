@@ -81,13 +81,14 @@ export const getBulkCourseByIdRepository = async ({ course_ids }) => {
 };
 
 
-export const getUserEnrolledCoursesRepository = async ({ authorization, course_id }) => {
+export const getUserEnrolledCoursesRepository = async ({ authorization, course_id, user_id }) => {
     
     const result = await axios.get(
         `${process.env.ENROLLMENT_SERVICE_URL}/api/enrollment/enrolled/${course_id}`,
         {
             headers: {
                 Authorization: authorization,
+                "x-user-id": user_id,
             },
         }
     );
@@ -97,6 +98,7 @@ export const getUserEnrolledCoursesRepository = async ({ authorization, course_i
 
     
 };
+
 
 
 

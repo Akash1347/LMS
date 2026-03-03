@@ -12,7 +12,7 @@ import {
 export const createModule = asyncHandler(async (req, res) => {
     const { title, order_index } = req.body;
     const course_id = req.params.course_id || req.body.course_id;
-    const instructorId = req.user.sub;
+    const instructorId = req.headers['x-user-id'];
 
     if (!course_id || !title || !order_index) {
         return res.status(400).json({ success: false, message: "course_id, title and order_index are required" });
@@ -44,7 +44,7 @@ export const createModule = asyncHandler(async (req, res) => {
 export const editModule = asyncHandler(async (req, res) => {
     const { title, order_index } = req.body;
     const module_id = req.params.module_id;
-    const instructorId = req.user.sub;
+    const instructorId = req.headers['x-user-id'];
 
     if (!module_id) {
         return res.status(400).json({ success: false, message: "module_id is required" });
@@ -62,7 +62,7 @@ export const editModule = asyncHandler(async (req, res) => {
 
 export const deleteModule = asyncHandler(async (req, res) => {
     const module_id = req.params.module_id || req.body.module_id;
-    const instructorId = req.user.sub;
+    const instructorId = req.headers['x-user-id'];
 
     if (!module_id) {
         return res.status(400).json({ success: false, message: "module_id is required" });

@@ -2,7 +2,7 @@ import asyncHandler from '../utils/async-handler.js';
 import pool from '../config/db.config.js';
 
 export const getInstructorCourse = asyncHandler(async (req, res) => {
-    const instructorId = req.user.sub;
+    const instructorId = req.headers['x-user-id'];
 
     const getCourse = await pool.query(
         `SELECT * FROM course WHERE instructor_id = $1`,

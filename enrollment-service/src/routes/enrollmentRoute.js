@@ -6,12 +6,19 @@ import { enrollInCourse, getUserEnrollments, UserEnrolledInCourse,
  } from "../controllers/enrollmentController.js";
 const route = Router();
 
-route.get('/my-enrollments', requireAuth, requireRole("Student"), getUserEnrollments);
-route.post('/enroll',requireAuth, requireRole("Student"), enrollInCourse);
-route.get('/enrolled/:courseId', requireAuth, requireRole("Student"), UserEnrolledInCourse);
+route.get('/my-enrollments' , getUserEnrollments);
+route.post('/enroll' , enrollInCourse);
+route.get('/enrolled/:courseId' , UserEnrolledInCourse);
 
 //analytics
-route.get('/analytics/:courseId', requireAuth, requireRole("Instructor"), getCourseAnalytics);
+route.get('/analytics/:courseId' , getCourseAnalytics);
+
+// route.get('/my-enrollments', requireAuth, requireRole("Student"), getUserEnrollments);
+// route.post('/enroll',requireAuth, requireRole("Student"), enrollInCourse);
+// route.get('/enrolled/:courseId', requireAuth, requireRole("Student"), UserEnrolledInCourse);
+
+// //analytics
+// route.get('/analytics/:courseId', requireAuth, requireRole("Instructor"), getCourseAnalytics);
 
 
 

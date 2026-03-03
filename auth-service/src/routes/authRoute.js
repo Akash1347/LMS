@@ -9,25 +9,22 @@ import {
     sendVerificationOtp,
     verifyOtp,
     isAuthenticated,
-    authWithJwtRegister,
-    getUserDetailsForJwt
+    getDetails
 } from '../controllers/authController.js';
-import { authMiddleware } from "../middlewares/authMiddleware.js";
 
 const route = express.Router();
 
 route.post('/register', registerUser);
 route.post('/login', loginUser);
-//route.get('/me', authMiddleware, getDetails);
+route.get('/me', getDetails);
 route.post('/logout', logoutUser);
-route.patch('/change-password', authMiddleware, changePassword);
+route.patch('/change-password', changePassword);
 route.post('/forgot-password', forgotPassword);
 route.patch('/reset-password', verifyResetOtp);
-route.post('/authenticate', authMiddleware, isAuthenticated);
-route.post('/send-verification-otp', authMiddleware, sendVerificationOtp);
-route.post('/verify-otp', authMiddleware, verifyOtp);
-route.post('/auth-with-jwt-register', authWithJwtRegister);
-route.get('/getDetails', getUserDetailsForJwt);
+route.post('/authenticate', isAuthenticated);
+route.post('/send-verification-otp', sendVerificationOtp);
+route.post('/verify-otp', verifyOtp);
+
 
 
 export default route;

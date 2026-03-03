@@ -31,8 +31,17 @@ export const handleCoursePublished = async (msg, ) => {
                 await updateEnrollmentCourseSnapshot(data);
                 break;
             case "COURSE_DELETED":
-                logger.info({ event: "course_snapshot_delete", courseId: data?.course_id });
-                await deleteEnrollmentCourseSnapshot(data.course_id);
+                {
+                    // Support both payload shapes:
+                    // { data: { courseId } } (current publisher)
+                    // { data: { course_id } } (legacy)
+                    const deletedCourseId = data?.courseId || data?.course_id || data?.id;
+                    if (!deletedCourseId) {
+                        throw new Error("Invalid event: Missing courseId for COURSE_DELETED");
+                    }
+                    logger.info({ event: "course_snapshot_delete", courseId: deletedCourseId });
+                    await deleteEnrollmentCourseSnapshot(deletedCourseId);
+                }
                 break;
             default:
                 throw new Error(`Unknown action: ${type}`);
@@ -43,10 +52,15 @@ export const handleCoursePublished = async (msg, ) => {
 
     } catch (error) {
         logger.error({ event: "course_event_process_failed", error: error.message });
-        const isDataError = error instanceof SyntaxError || error.message.includes("Invalid event");
+        const isDataError =
+            error instanceof SyntaxError ||
+            error.message.includes("Invalid event") ||
+            error.message.includes("Unknown action") ||
+            error.message.includes("Cannot read properties of undefined");
         
         channel.nack(msg, false, !isDataError); 
     }
 };
+
 
 

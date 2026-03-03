@@ -10,9 +10,8 @@ export const authMiddleware = (req, res, next) => {
         return res.status(401).json({ success: false, message: 'Unauthorized' });
     }
     try {
-        const secret = process.env.JWT_SECRET || 'jnsi2udnbhdjnwk';
-        const decoded = jwt.verify(token, secret, { algorithms: ["HS256"], issuer: "auth-service" });
-        req.userId = decoded.sub || decoded.userId;
+        const secret = process.env.JWT_SECRET;
+        const decoded = jwt.verify(token, secret);
         req.user = decoded;
         next();
     } catch (error) {

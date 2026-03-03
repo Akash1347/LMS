@@ -25,7 +25,7 @@ export const createCourse = asyncHandler(async (req, res) => {
         return res.status(400).json({ success: false, message: "Title and level are required" });
     }
 
-    const instructorId = req.user.sub;
+    const instructorId = req.headers['x-user-id'];
     const result = await createCourseRepository({
         title,
         description,
@@ -52,7 +52,7 @@ export const createCourse = asyncHandler(async (req, res) => {
 
 export const deleteCourse = asyncHandler(async (req, res) => {
     const course_id = req.params.course_id;
-    const instructorId = req.user.sub;
+    const instructorId = req.headers['x-user-id'];
 
     if (!course_id) {
         return res.status(400).json({ success: false, message: "course_id is required" });
@@ -72,7 +72,7 @@ export const deleteCourse = asyncHandler(async (req, res) => {
 export const editCourse = asyncHandler(async (req, res) => {
     const { title, description, category, level, language, price, currency } = req.body;
     const course_id = req.params.course_id || req.body.course_id;
-    const instructorId = req.user.sub;
+    const instructorId = req.headers['x-user-id'];
 
     if (!course_id) {
         return res.status(400).json({ success: false, message: "course_id is required" });

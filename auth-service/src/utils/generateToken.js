@@ -4,13 +4,16 @@ export const generateToken = (user) => {
     const payload = {
         sub: user.user_id,
         email: user.email,
+        username: user.user_name,
         role: user.role
     };
-    const secret = process.env.JWT_SECRET || 'jnsi2udnbhdjnwk';
+    const secret = process.env.JWT_SECRET;
     const options = {
         algorithm: 'HS256',
-        expiresIn: '1y', //for 1 year
+        expiresIn: '1y',
         issuer: 'auth-service'
     };
+
+
     return jwt.sign(payload, secret, options);
 }
