@@ -1,7 +1,5 @@
-
-import { readFileSync } from 'fs';
 import jwt from 'jsonwebtoken';
-const publicKey = readFileSync(new URL('../../src/keys/public.pem', import.meta.url), 'utf8');
+
 export const authMiddleware = (req, res, next) => {
     const authHeader = req.headers['authorization'];
     if(!authHeader){
@@ -12,8 +10,10 @@ export const authMiddleware = (req, res, next) => {
         return res.status(401).json({ success: false, message: 'Unauthorized' });
     }
     try {
-        const decoded = jwt.verify(token, publicKey, { algorithms: ["RS256"], issuer: "auth-service" });
+        const secret = process.env.JWT_SECRET || 'jnsi2udnbhdjnwk';
+        const decoded = jwt.verify(token, secret, { algorithms: ["HS256"], issuer: "auth-service" });
         req.userId = decoded.sub || decoded.userId;
+        req.user = decoded;
         next();
     } catch (error) {
         return res.status(401).json({ success: false, message: 'Unauthorized' });

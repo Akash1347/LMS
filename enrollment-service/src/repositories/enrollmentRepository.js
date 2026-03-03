@@ -1,4 +1,4 @@
-import pool from "../config/dbConfig.js";
+import pool from "../config/db.config.js";
 
 export const insertEnrollment = async (userId, courseId) =>{
     const result = await pool.query(

@@ -1,4 +1,5 @@
-import { getChannel } from "../../config/rabbitMq.js";
+import { getChannel } from "../../config/rabbitMq.config.js";
+import logger from "../../config/logger.config.js";
 
 import { insertEnrollmentCourseSnapshot, 
         updateEnrollmentCourseSnapshot, 
@@ -13,8 +14,7 @@ export const handleCoursePublished = async (msg, ) => {
 
     try {
         event = JSON.parse(msg.content.toString());
-        console.log("Received event:", event);
-        console.log("Processing COURSE_PUBLISHED:", event.data?.id); 
+        logger.info({ event: "course_event_received", type: event.type, courseId: event.data?.id });
         let {type, data} = event;
 
         if (!event.data) {
@@ -23,15 +23,15 @@ export const handleCoursePublished = async (msg, ) => {
 
         switch(type) {
             case "COURSE_PUBLISHED":
-                console.log("Inserting enrollment snapshot for course:");
+                logger.info({ event: "course_snapshot_insert", courseId: data?.id });
                 await insertEnrollmentCourseSnapshot(data);
                 break;
             case "COURSE_UPDATED":
-                console.log("Updating enrollment snapshot for course:");
+                logger.info({ event: "course_snapshot_update", courseId: data?.id });
                 await updateEnrollmentCourseSnapshot(data);
                 break;
             case "COURSE_DELETED":
-                console.log("Deleting enrollment snapshot for course ID:");
+                logger.info({ event: "course_snapshot_delete", courseId: data?.course_id });
                 await deleteEnrollmentCourseSnapshot(data.course_id);
                 break;
             default:
@@ -39,13 +39,14 @@ export const handleCoursePublished = async (msg, ) => {
         }
                  
         channel.ack(msg);
-        console.log("Successfully processed enrollment snapshot");
+        logger.info({ event: "course_event_processed", type });
 
     } catch (error) {
-        console.error("Critical Error in handleCoursePublished:", error.message); 
+        logger.error({ event: "course_event_process_failed", error: error.message });
         const isDataError = error instanceof SyntaxError || error.message.includes("Invalid event");
         
         channel.nack(msg, false, !isDataError); 
     }
 };
+
 

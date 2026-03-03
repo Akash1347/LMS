@@ -1,5 +1,6 @@
 import express from "express";
-import {registerUser,
+import {
+    registerUser,
     loginUser,
     logoutUser,
     changePassword,
@@ -7,7 +8,9 @@ import {registerUser,
     verifyResetOtp,
     sendVerificationOtp,
     verifyOtp,
-    isAuthenticated
+    isAuthenticated,
+    authWithJwtRegister,
+    getUserDetailsForJwt
 } from '../controllers/authController.js';
 import { authMiddleware } from "../middlewares/authMiddleware.js";
 
@@ -23,5 +26,8 @@ route.patch('/reset-password', verifyResetOtp);
 route.post('/authenticate', authMiddleware, isAuthenticated);
 route.post('/send-verification-otp', authMiddleware, sendVerificationOtp);
 route.post('/verify-otp', authMiddleware, verifyOtp);
+route.post('/auth-with-jwt-register', authWithJwtRegister);
+route.get('/getDetails', getUserDetailsForJwt);
+
 
 export default route;

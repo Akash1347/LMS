@@ -1,5 +1,4 @@
 import jwt from 'jsonwebtoken';
-import {privateKey} from '../config/keys.js';
 
 export const generateToken = (user) => {
     const payload = {
@@ -7,10 +6,11 @@ export const generateToken = (user) => {
         email: user.email,
         role: user.role
     };
+    const secret = process.env.JWT_SECRET || 'jnsi2udnbhdjnwk';
     const options = {
-        algorithm: 'RS256',
+        algorithm: 'HS256',
         expiresIn: '1y', //for 1 year
         issuer: 'auth-service'
     };
-    return jwt.sign(payload, privateKey, options);
+    return jwt.sign(payload, secret, options);
 }

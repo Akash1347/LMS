@@ -1,4 +1,4 @@
-import "./env.js";
+import "./env.config.js";
 import {
     createVerifyJwt,
     createRequireAuth

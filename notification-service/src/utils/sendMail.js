@@ -1,5 +1,6 @@
 import nodemailer from "nodemailer";
-import env from "../config/env.js";
+import env from "../config/env.config.js";
+import logger from "../config/logger.config.js";
 
 const sendMail = async ({ to, subject, text, template }) => {
     try {
@@ -20,10 +21,10 @@ const sendMail = async ({ to, subject, text, template }) => {
             text: text,
             html: template,
         });
-        console.log("Email sent: ", info.messageId);
+        logger.info({ event: "email_sent", messageId: info.messageId, to });
         return info;
     } catch (error) {
-        console.error("Error sending email: ", error);
+        logger.error({ event: "email_send_failed", error: error.message, to, subject });
         throw new Error("Failed to send email");
     }
 };

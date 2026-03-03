@@ -1,6 +1,7 @@
 import express from "express";
-import "./config/env.js";
-import { connectRabbitMq } from "./config/rabbitMq.js";
+import "./config/env.config.js";
+import { connectRabbitMq } from "./config/rabbitMq.config.js";
+import logger from "./config/logger.config.js";
 import { initEvents } from "./events/event-handler.js";
 
 import enrollmentRoute from "./routes/enrollmentRoute.js";
@@ -18,5 +19,5 @@ app.get("/", (req, res) => {
 
 app.use('/api/enrollment', enrollmentRoute);
 app.listen(PORT, () => {
-    console.log(`Enrollment service running on port ${PORT}`);
+    logger.info({ event: "service_started", port: String(PORT), nodeEnv: process.env.NODE_ENV || "development" });
 });

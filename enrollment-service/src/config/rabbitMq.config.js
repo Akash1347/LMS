@@ -1,5 +1,6 @@
 import amqplib from "amqplib";
-import "./env.js";
+import "./env.config.js";
+import logger from "./logger.config.js";
 let channel;
 
 export const connectRabbitMq = async() => {
@@ -9,7 +10,11 @@ export const connectRabbitMq = async() => {
     const exchange = "enrollment.events";
     await channel.assertExchange(exchange, "topic", { durable: true });
 
-    console.log("RabbitMQ connected");
+    logger.info({
+        event: "rabbitmq_connected",
+        url: rabbitMq_URL,
+        
+    });
 };
 
 export const getChannel = () => {

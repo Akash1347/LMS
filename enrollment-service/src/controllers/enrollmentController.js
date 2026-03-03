@@ -1,12 +1,12 @@
-import pool from "../config/dbConfig.js";
+import pool from "../config/db.config.js";
 import asyncHandler from "../utils/async-handler.js";
-import { getChannel } from "../config/rabbitMq.js";
+import logger from "../config/logger.config.js";
 import { insertEnrollment, insertEnrollmentCourseSnapshot, updateEnrollmentCourseSnapshot, deleteEnrollmentCourseSnapshot, getUserEnrollmentsRepository, isUserEnrolledInCourse } from "../repositories/enrollmentRepository.js";
 
  
 export const getUserEnrollments = asyncHandler(async (req, res) => {
     const userId = req.user.sub;
-    console.log(userId);
+    logger.info({ event: "fetch_user_enrollments", userId });
     const result = await getUserEnrollmentsRepository(userId);
     res.status(200).json({
         success: true,
@@ -18,8 +18,10 @@ export const getUserEnrollments = asyncHandler(async (req, res) => {
 export const enrollInCourse = asyncHandler(async(req, res) => {
     const {courseId} = req.body;
     const userId = req.user.sub;
+    logger.info({ event: "enrollment_request_received", userId, courseId });
      
     if(!courseId) {
+        logger.warn({ event: "enrollment_rejected", reason: "missing_course_id", userId });
         return res.status(400).json({ success: false, message: "courseId is required" });
     }
     const courseExists = await pool.query(
@@ -28,6 +30,7 @@ export const enrollInCourse = asyncHandler(async(req, res) => {
         , [courseId]
     )
     if(courseExists.rows.length === 0) {
+        logger.warn({ event: "enrollment_rejected", reason: "course_not_found", userId, courseId });
         return res.status(404).json({ success: false, message: "Course not found" });
     }
 
@@ -37,6 +40,7 @@ export const enrollInCourse = asyncHandler(async(req, res) => {
         , [courseId, userId]
     )
     if(existingEnrollment.rows.length > 0) {
+        logger.warn({ event: "enrollment_rejected", reason: "already_enrolled", userId, courseId });
         return res.status(400).json({ success: false, message: "User is already enrolled in this course" });
     }
 
@@ -48,6 +52,7 @@ export const enrollInCourse = asyncHandler(async(req, res) => {
             RETURNING *`
             , [courseId, userId]
         )
+        logger.info({ event: "enrollment_created", status: "active", userId, courseId });
         return res.status(201).json({
             success: true,
             message: "Enrolled in course successfully",
@@ -71,6 +76,7 @@ export const enrollInCourse = asyncHandler(async(req, res) => {
         message: "Enrollment created successfully. Please proceed to payment.",
         data: result.rows[0]
     })
+    logger.info({ event: "enrollment_created", status: "pending", userId, courseId });
     // we have to emit event for pending enrollment
 
 });
@@ -80,10 +86,12 @@ export const UserEnrolledInCourse = asyncHandler(async (req, res) => {
     const userId = req.user.sub;
     const courseId = req.params.courseId;
     if (!courseId) {
+        logger.warn({ event: "enrollment_check_rejected", reason: "missing_course_id", userId });
         return res.status(400).json({ success: false, message: "courseId is required" });
     }
 
     const result = await isUserEnrolledInCourse(userId, courseId);
+    logger.info({ event: "enrollment_check_completed", userId, courseId, enrolled: result });
     res.status(200).json({
         success: true,
         message: result ? "User is enrolled in course" : "User is not enrolled in course",
@@ -98,6 +106,7 @@ export const UserEnrolledInCourse = asyncHandler(async (req, res) => {
 export const getCourseAnalytics = asyncHandler(async (req, res) => {
     const courseId = req.params.courseId;
     const instructorId = req.user.sub;
+    logger.info({ event: "fetch_course_enrollment_analytics", courseId, instructorId });
 
     const getAnalytics = await pool.query(
         `SELECT COUNT(*) as enrolled_students FROM enrollment WHERE course_id = $1 AND status = 'active'`,

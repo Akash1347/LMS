@@ -1,4 +1,5 @@
 import amqp from "amqplib";
+import logger from "./logger.config.js";
 let channel;
 
 export async function connectRabbitMq() {
@@ -18,7 +19,10 @@ export async function connectRabbitMq() {
     
     //await channel.assertExchange("notification_exchange", "topic", {durable: true});
 
-    console.log("RabbitMQ connected in notification-service");
+    logger.info({
+        event: "rabbitmq_connected",
+        queues: exchanges.map(e => e.queue),
+    });
     return {channel, queues: exchanges.map(e => e.queue)};
 
 }

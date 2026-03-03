@@ -1,4 +1,5 @@
-import { getChannel } from "../config/rabbitMq.js";
+import { getChannel } from "../config/rabbitMq.config.js";
+import logger from "../config/logger.config.js";
 import { handleCoursePublished } from "./consumers/courseEvents.js";
 
 export const setupEventHandlers = async () => {
@@ -17,7 +18,7 @@ export const setupEventHandlers = async () => {
             await handleCoursePublished(msg);
         }
     }, { noAck: false });
-    console.log(`Subscribed to ${routingKey} events`);
+    logger.info({ event: "enrollment_subscribed", routingKey, queue, exchange });
 };
 
 export const initEvents = async () => {
