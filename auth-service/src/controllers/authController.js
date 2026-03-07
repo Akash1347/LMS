@@ -37,7 +37,11 @@ export const registerUser = async (req, res) => {
             name: user.user_name
         });
 
-        return res.status(201).json({ success: true, message: 'User registered successfully' });
+        return res.status(201).json({
+            success: true,
+            message: 'User registered successfully',
+            token
+        });
     } catch (error) {
         console.error(error);
         return res.status(500).json({ success: false, message: 'Internal server error' });
@@ -65,7 +69,11 @@ export const loginUser = async (req, res) => {
 
         const token = generateToken(user);
         res.setHeader('Authorization', `Bearer ${token}`);
-        return res.status(200).json({ success: true, message: 'Login successful' });
+        return res.status(200).json({
+            success: true,
+            message: 'Login successful',
+            token
+        });
     } catch (error) {
         console.error(error);
         return res.status(500).json({ success: false, message: 'Internal server error' });
