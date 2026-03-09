@@ -6,28 +6,71 @@ export const createCourseRepository = async ({
     description,
     category,
     level,
+    status,
     language,
     instructorId,
     price,
     currency,
+    courseImageUrl,
 }) => {
+const normalizedCategory = Array.isArray(category)
+        ? category
+        : String(category || "")
+            .split(",")
+            .map((item) => item.trim())
+            .filter(Boolean);
+
+const baseValues = [
+        title,
+        description || "",
+        normalizedCategory.length > 0 ? `{${normalizedCategory.join(",")}}` : "{}",
+        level,
+        language || "english",
+        status || "draft",
+        instructorId,
+        price || 0,
+        currency || "USD",
+    ];
+
+    // Try with schema using thumbnail_url first
+    try {
+        return await pool.query(
+            `
+        INSERT INTO course
+        (title, description, category, level, language, status, instructor_id, price, currency, thumbnail_url)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+        RETURNING *
+        `,
+            [...baseValues, courseImageUrl || "null"]
+        );
+    } catch (error) {
+        // Fallback to schema using thumbnail column name
+        if (error?.code !== "42703") throw error;
+    }
+
+    try {
+        return await pool.query(
+            `
+        INSERT INTO course
+        (title, description, category, level, language, status, instructor_id, price, currency, thumbnail)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+        RETURNING *
+        `,
+            [...baseValues, courseImageUrl || null]
+        );
+    } catch (error) {
+        if (error?.code !== "42703") throw error;
+    }
+
+    // Final fallback for older schema
     return pool.query(
         `
         INSERT INTO course
-        (title, description, category, level, language, instructor_id, price, currency)
-        VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+        (title, description, category, level, language, status, instructor_id, price, currency)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
         RETURNING *
         `,
-        [
-            title,
-            description || "",
-            category ? `{${category}}` : null,
-            level,
-            language ? `{${language}}` : "{english}",
-            instructorId,
-            price || 0,
-            currency || "USD",
-        ]
+        baseValues
     );
 };
 
@@ -98,6 +141,8 @@ export const getUserEnrolledCoursesRepository = async ({ authorization, course_i
 
     
 };
+
+
 
 
 

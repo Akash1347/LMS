@@ -1,5 +1,6 @@
 import asyncHandler from "../utils/async-handler.js";
 import { emitCoursePublished, emitCourseUpdated, emitCourseDeleted } from "../events/emitCoursePublished.js";
+import { upload, uploadToCloudinary } from "../config/cloud.config.js";
 import {
     createCourseRepository,
     deleteCourseRepository,
@@ -10,45 +11,74 @@ import {
 } from "../repositories/course.repositories.js";
 
 
-export const createCourse = asyncHandler(async (req, res) => {
-    const {
-        title,
-        description,
-        category,
-        level,
-        language,
-        price,
-        currency
-    } = req.body;
+export const createCourse = [
+    upload,
+    asyncHandler(async (req, res) => {
+        const {
+            title,
+            description,
+            category,
+            level,
+            status,
+            language,
+            price,
+            currency
+        } = req.body;
 
-    if (!title || !level) {
-        return res.status(400).json({ success: false, message: "Title and level are required" });
-    }
+        if (!title || !level) {
+            return res.status(400).json({ success: false, message: "Title and level are required" });
+        }
 
-    const instructorId = req.headers['x-user-id'];
-    const result = await createCourseRepository({
-        title,
-        description,
-        category,
-        level,
-        language,
-        instructorId,
-        price,
-        currency,
-    });
-    const emittedCourseDat = {
-        id: result.rows[0].id,
-        status: result.rows[0].status,
-        price: result.rows[0].price,
-        currency: result.rows[0].currency
-    };
-    await emitCoursePublished(emittedCourseDat);
-    res.status(201).json({
-        success: true,
-        message: "Course created successfully",
-        data: result.rows[0]
-    });
-});
+        const defaultCourseImage = process.env.DEFAULT_COURSE_IMAGE_URL || "https://res.cloudinary.com/demo/image/upload/v1312461204/sample.jpg";
+        let courseImageUrl = defaultCourseImage;
+
+        const normalizedCategory = Array.isArray(category)
+            ? category
+            : String(category || "")
+                .split(",")
+                .map((item) => item.trim())
+                .filter(Boolean);
+
+        if (req.file?.buffer) {
+            try {
+                const uploadResult = await uploadToCloudinary(req.file.buffer, {
+                    folder: "lms-course",
+                    resource_type: "image",
+                });
+                courseImageUrl = uploadResult?.secure_url || defaultCourseImage;
+            } catch (error) {
+                console.error("Course image upload failed, using default image:", error?.message || error);
+                courseImageUrl = defaultCourseImage;
+            }
+        }
+
+        const instructorId = req.headers['x-user-id'];
+        const result = await createCourseRepository({
+            title,
+            description,
+            category: normalizedCategory,
+            level,
+            status,
+            language,
+            instructorId,
+            price,
+            currency,
+            courseImageUrl,
+        });
+        const emittedCourseDat = {
+            id: result.rows[0].id,
+            status: result.rows[0].status,
+            price: result.rows[0].price,
+            currency: result.rows[0].currency
+        };
+        await emitCoursePublished(emittedCourseDat);
+        res.status(201).json({
+            success: true,
+            message: "Course created successfully",
+            data: result.rows[0]
+        });
+    })
+];
 
 export const deleteCourse = asyncHandler(async (req, res) => {
     const course_id = req.params.course_id;
