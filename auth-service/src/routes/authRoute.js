@@ -9,7 +9,8 @@ import {
     sendVerificationOtp,
     verifyOtp,
     isAuthenticated,
-    getDetails
+    getDetails,
+    getUserNameById
 } from '../controllers/authController.js';
 
 const route = express.Router();
@@ -17,6 +18,7 @@ const route = express.Router();
 route.post('/register', registerUser);
 route.post('/login', loginUser);
 route.get('/me', getDetails);
+route.get('/public/user/:user_id/name', getUserNameById);
 route.post('/logout', logoutUser);
 route.patch('/change-password', changePassword);
 route.post('/forgot-password', forgotPassword);

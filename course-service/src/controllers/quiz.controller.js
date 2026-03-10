@@ -99,7 +99,18 @@ export const startQuiz = asyncHandler(async (req, res) => {
         return res.status(500).json({ success: false, message: "Failed to start quiz attempt" });
     }
 
-    res.status(200).json({ success: true, data: { attempt: startQuizAttempt.rows[0], questions: questions.rows } });
+    res.status(200).json({
+        success: true,
+        data: {
+            attempt: startQuizAttempt.rows[0],
+            questions: questions.rows,
+            quiz: {
+                id: quiz.id,
+                time_limit: quiz.time_limit,
+                title: quiz.title,
+            },
+        }
+    });
 
 });
 

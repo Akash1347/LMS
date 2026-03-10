@@ -9,6 +9,7 @@ const router = express.Router();
 router.post('/:course_id/quizzes/:quiz_id/start', authenticate, authorize("Student"), courseProxy);
 router.post('/quiz-attempts/:attempt_id', authenticate, authorize("Student"), courseProxy);
 router.get('/quiz/:quiz_id/analytics', courseProxy);
+router.get('/modules/:module_id/lessons', authenticate, courseProxy);
 
 router.get('/instructor/courses', authenticate, authorize("Instructor"), courseProxy);
 router.get('/quizzes/:quiz_id', authenticate, authorize("Instructor"), courseProxy);

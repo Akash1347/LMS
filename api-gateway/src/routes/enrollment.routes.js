@@ -9,7 +9,7 @@ const router = express.Router();
 router.use('/my-enrollments', authenticate, authorize("Student"))
 router.use('/enroll', authenticate, authorize("Student"));
 router.use('/enrolled/:courseId', authenticate, authorize("Student"));
-router.use('/analytics/:courseId', authenticate, authorize("Instructor"));
+router.get('/analytics/:courseId', enrollmentProxy);
 
 
 

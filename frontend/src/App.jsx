@@ -1,6 +1,7 @@
 import React from 'react'
 import MainRoutes from './Routes/MainRoutes'
 import Navbar from './ui/Navbar'
+import Footer from './ui/Footer'
 import { useLocation } from 'react-router-dom'
 
 const App = () => {
@@ -13,6 +14,7 @@ const App = () => {
       {!shouldHideNavbar && <Navbar/>}
       
       <MainRoutes />
+      <Footer />
     </div>
   )
 }

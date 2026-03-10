@@ -70,7 +70,7 @@ const CreateCourse = () => {
 const payload = new FormData()
     payload.append('title', formData.title)
     payload.append('description', formData.description)
-    payload.append('categories', formData.categories) // 👈 send as array
+    payload.append('category', formData.categories.join(','))
     payload.append('level', formData.level)
     payload.append('status', formData.status)
     payload.append('language', formData.language)

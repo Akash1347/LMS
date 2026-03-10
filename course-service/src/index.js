@@ -1,5 +1,6 @@
 import "./config/env.config.js"
 import express from "express";
+import multer from "multer";
 
 import courseRoutes from "./routes/courseRoute.js";
 import { connectRabbitMq } from "./config/rabbitMq.config.js";
@@ -56,6 +57,26 @@ app.use('/api/course', courseRoutes);
 
 // Global error handler for JSON parsing errors
 app.use((err, req, res, next) => {
+    if (err instanceof multer.MulterError) {
+        if (err.code === "LIMIT_FILE_SIZE") {
+            return res.status(413).json({
+                success: false,
+                message: "File too large. Please upload a smaller file.",
+            });
+        }
+        return res.status(400).json({
+            success: false,
+            message: err.message || "Invalid file upload",
+        });
+    }
+
+    if (err?.message?.includes("Unsupported file type")) {
+        return res.status(415).json({
+            success: false,
+            message: err.message,
+        });
+    }
+
     if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
         logger.error({
             event: "json_parse_error",

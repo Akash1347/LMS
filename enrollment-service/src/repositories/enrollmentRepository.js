@@ -54,7 +54,9 @@ export const getUserEnrollmentsRepository = async (userId) => {
     const result = await pool.query(
         `SELECT course_id, status, enrolled_at
         FROM enrollment
-        WHERE user_id = $1 AND status = 'active'`,
+        WHERE user_id = $1
+          AND status IN ('active', 'pending')
+        ORDER BY enrolled_at DESC`,
         [userId]
     );
     return result.rows;

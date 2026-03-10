@@ -297,4 +297,35 @@ export const isAuthenticated = async (req, res) => {
     return res.status(200).json({ success: true, message: 'Authenticated' });
 }
 
+export const getUserNameById = async (req, res) => {
+    const { user_id } = req.params;
+
+    if (!user_id) {
+        return res.status(400).json({ success: false, message: 'user_id is required' });
+    }
+
+    try {
+        const userData = await pool.query(
+            'SELECT user_id, user_name FROM users WHERE user_id = $1',
+            [user_id]
+        );
+
+        if (userData.rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+
+        const user = userData.rows[0];
+        return res.status(200).json({
+            success: true,
+            data: {
+                user_id: user.user_id,
+                user_name: user.user_name,
+            },
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+}
+
  

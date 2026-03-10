@@ -6,7 +6,19 @@ import App from './App.jsx'
 import { BrowserRouter } from 'react-router-dom'
 import { Toaster } from 'sonner'
 
-const queryClient = new QueryClient()
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: (failureCount, error) => {
+        const status = error?.response?.status
+        if (status === 429) return false
+        return failureCount < 1
+      },
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+    },
+  },
+})
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

@@ -1,6 +1,8 @@
 import asyncHandler from "../utils/async-handler.js";
+import axios from "axios";
 import { emitCoursePublished, emitCourseUpdated, emitCourseDeleted } from "../events/emitCoursePublished.js";
 import { upload, uploadToCloudinary } from "../config/cloud.config.js";
+import { getModulesByCourseIdRepository } from "../repositories/module.repositories.js";
 import {
     createCourseRepository,
     deleteCourseRepository,
@@ -18,6 +20,7 @@ export const createCourse = [
             title,
             description,
             category,
+            categories,
             level,
             status,
             language,
@@ -32,12 +35,16 @@ export const createCourse = [
         const defaultCourseImage = process.env.DEFAULT_COURSE_IMAGE_URL || "https://res.cloudinary.com/demo/image/upload/v1312461204/sample.jpg";
         let courseImageUrl = defaultCourseImage;
 
-        const normalizedCategory = Array.isArray(category)
-            ? category
-            : String(category || "")
+        const incomingCategory = category ?? categories;
+
+        const normalizedCategory = Array.isArray(incomingCategory)
+            ? incomingCategory
+            : String(incomingCategory || "")
                 .split(",")
                 .map((item) => item.trim())
                 .filter(Boolean);
+
+        const categoryToStore = normalizedCategory.length > 0 ? normalizedCategory : ["general"];
 
         if (req.file?.buffer) {
             try {
@@ -56,7 +63,7 @@ export const createCourse = [
         const result = await createCourseRepository({
             title,
             description,
-            category: normalizedCategory,
+            category: categoryToStore,
             level,
             status,
             language,
@@ -140,14 +147,42 @@ export const getCourses = asyncHandler(async (req, res) => {
 
 export const getCourseById = asyncHandler(async (req, res) => {
     const { course_id } = req.params;
-    const result = await getCourseByIdRepository({ course_id });
-    if (result.rows.length === 0) {
+    const courseResult = await getCourseByIdRepository({ course_id });
+    console.log("[getCourseById] courseResult rows:", courseResult.rows);
+    if (courseResult.rows.length === 0) {
         return res.status(404).json({ success: false, message: "Course not found" });
     }
+
+    const course = courseResult.rows[0];
+
+    const moduleResult = await getModulesByCourseIdRepository({ course_id });
+    const modules = moduleResult.rows || [];
+    console.log("[getCourseById] modules:", modules);
+
+    let instructor = null;
+    try {
+        const instructorResponse = await axios.get(`${process.env.AUTH_SERVICE_URL}/api/auth/public/user/${course.instructor_id}/name`);
+        const instructorData = instructorResponse?.data?.data;
+        if (instructorData) {
+            instructor = {
+                id: instructorData.user_id,
+                name: instructorData.user_name,
+            };
+        }
+        console.log("[getCourseById] instructor:", instructor);
+    } catch (error) {
+        console.log("[getCourseById] instructor fetch error:", error?.message || error);
+        instructor = null;
+    }
+
     return res.status(200).json({
         success: true,
         message: "Course retrieved successfully",
-        data: result.rows[0]
+        data: {
+            course,
+            modules,
+            instructor,
+        }
     });
 });
 

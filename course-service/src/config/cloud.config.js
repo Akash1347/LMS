@@ -11,8 +11,35 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// Multer: store file in memory
-export const upload = multer({ storage: multer.memoryStorage() }).single("file");
+const LESSON_MAX_FILE_SIZE_MB = Number(process.env.LESSON_MAX_FILE_SIZE_MB || 50)
+const LESSON_MAX_FILE_SIZE_BYTES = LESSON_MAX_FILE_SIZE_MB * 1024 * 1024
+
+const lessonFileFilter = (_req, file, cb) => {
+  const allowed = [
+    "video/mp4",
+    "video/webm",
+    "video/ogg",
+    "video/quicktime",
+    "application/pdf",
+    "image/png",
+    "image/jpeg",
+    "image/jpg",
+    "image/webp",
+  ]
+
+  if (!allowed.includes(file.mimetype)) {
+    return cb(new Error("Unsupported file type. Use MP4/WebM/OGG/MOV, PDF, PNG, JPG, or WEBP."))
+  }
+
+  cb(null, true)
+}
+
+// Multer: store file in memory + enforce file limits early
+export const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: LESSON_MAX_FILE_SIZE_BYTES },
+  fileFilter: lessonFileFilter,
+}).single("file");
 
 // Upload helper: auto-detect resource type (image/video/raw)
 export function uploadToCloudinary(buffer, options = {}) {

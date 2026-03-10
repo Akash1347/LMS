@@ -1,6 +1,7 @@
 import { uploadToCloudinary } from "../config/cloud.config.js";
 import { upload } from "../config/cloud.config.js";
 import { v2 as cloudinary } from "cloudinary";
+import logger from "../config/logger.config.js";
 import asyncHandler from "../utils/async-handler.js";
 import {
     createLessonRepository,
@@ -23,6 +24,8 @@ import {
 
 } from "../repositories/lesson.repositories.js";
 import { getUserEnrolledCoursesRepository } from "../repositories/course.repositories.js";
+
+const makeShortOptionId = () => Math.random().toString(36).slice(2, 7);
 
 export const createLesson = [
     upload, // multer memory middleware
@@ -54,10 +57,25 @@ export const createLesson = [
         const isPdf = req.file.mimetype === "application/pdf";
 
         // Upload to Cloudinary (force raw for PDFs)
-        const uploadResult = await uploadToCloudinary(req.file.buffer, {
-            folder: "lms-content",
-            resource_type: isPdf ? "raw" : "auto",
-        });
+        let uploadResult;
+        try {
+            uploadResult = await uploadToCloudinary(req.file.buffer, {
+                folder: "lms-content",
+                resource_type: isPdf ? "raw" : "auto",
+            });
+        } catch (error) {
+            const statusCode = Number(error?.http_code || error?.statusCode || error?.status || 500);
+            if (statusCode === 413) {
+                return res.status(413).json({
+                    success: false,
+                    message: "Uploaded file is too large for processing. Please reduce file size and try again.",
+                });
+            }
+            return res.status(500).json({
+                success: false,
+                message: error?.message || "Failed to upload lesson file",
+            });
+        }
         console.log("Cloudinary upload result:", uploadResult);
         const publicId = uploadResult.public_id;
 
@@ -155,10 +173,17 @@ export const createQuiz = asyncHandler(async (req, res) => {
     }
 
 
+    const rawQuestions = Array.isArray(req.body.questions) ? req.body.questions : [];
+    if (rawQuestions.length === 0) {
+        return res.status(400).json({ success: false, message: "At least one quiz question is required" });
+    }
+
     // start transaction
     await beginLessonTransactionRepository();
     try {
-        const lessonType = type || "quiz";
+        // Keep lesson.type compatible with existing lesson constraints (article/video)
+        // Quiz lessons are identified by content_ref prefix: "quiz:<quizId>" in frontend.
+        const lessonType = ["article", "video"].includes(type) ? type : "article";
         const quizResult = await createQuizRepository({
             course_id,
             title,
@@ -168,8 +193,51 @@ export const createQuiz = asyncHandler(async (req, res) => {
         });
         const quizId = quizResult.rows[0].id;
 
-        const questions = req.body.questions || [];
-        await createQuestionsBulkRepository({ quizId, questions });
+        const normalizedQuestions = rawQuestions.map((question, questionIndex) => {
+            const optionIdMap = new Map();
+            const normalizedOptions = Array.isArray(question?.options)
+                ? question.options.map((option) => {
+                    const originalId = option?.id;
+                    const normalizedId = makeShortOptionId();
+                    optionIdMap.set(originalId, normalizedId);
+                    return {
+                        ...option,
+                        id: normalizedId,
+                    };
+                })
+                : [];
+
+            if (!question?.question_text || !String(question.question_text).trim()) {
+                const err = new Error(`Question text is required at index ${questionIndex}`);
+                err.status = 400;
+                throw err;
+            }
+
+            if (normalizedOptions.length < 2) {
+                const err = new Error(`At least 2 options are required at question index ${questionIndex}`);
+                err.status = 400;
+                throw err;
+            }
+
+            const incomingCorrectId =
+                question?.correct_option_id || question?.correct_answer_id || question?.correct_answer;
+
+            const mappedCorrectId = optionIdMap.get(incomingCorrectId);
+
+            if (!mappedCorrectId) {
+                const err = new Error(`Invalid correct answer for question at index ${questionIndex}`);
+                err.status = 400;
+                throw err;
+            }
+
+            return {
+                ...question,
+                options: normalizedOptions,
+                correct_option_id: mappedCorrectId,
+            };
+        });
+
+        await createQuestionsBulkRepository({ quizId, questions: normalizedQuestions });
 
         //make lesson-quiz mapping 
 
@@ -179,8 +247,8 @@ export const createQuiz = asyncHandler(async (req, res) => {
             title,
             type: lessonType,
             quizContentRef,
-            time_limit,
             order_index,
+            public_id: `quiz_${quizId}`,
         });
 
         await commitLessonTransactionRepository();
@@ -194,7 +262,47 @@ export const createQuiz = asyncHandler(async (req, res) => {
 
     } catch (error) {
         await rollbackLessonTransactionRepository();
-        throw error;
+
+        logger.error({
+            event: "create_quiz_failed",
+            message: error?.message,
+            code: error?.code,
+            detail: error?.detail,
+            hint: error?.hint,
+            module_id,
+            course_id,
+        });
+
+        if (error?.code === "23505") {
+            return res.status(409).json({
+                success: false,
+                message: "Quiz data conflicts with existing records. Please try a different order index.",
+                detail: error?.detail,
+            });
+        }
+
+        if (error?.status === 400) {
+            return res.status(400).json({
+                success: false,
+                message: error?.message || "Invalid quiz payload",
+            });
+        }
+
+        if (error?.code === "22P02" || error?.code === "23514" || error?.code === "23502") {
+            return res.status(400).json({
+                success: false,
+                message: error?.message || "Invalid quiz payload",
+                code: error?.code,
+                detail: error?.detail,
+            });
+        }
+
+        return res.status(500).json({
+            success: false,
+            message: error?.message || "Failed to create quiz",
+            code: error?.code,
+            detail: error?.detail,
+        });
     }
 }
 );

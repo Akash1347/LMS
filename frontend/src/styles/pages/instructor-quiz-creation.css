@@ -1,0 +1,101 @@
+.iqf-form {
+  background: #111420;
+  border: 1px solid #1e2130;
+  border-radius: 12px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  animation: icd-in 0.2s ease;
+}
+
+.iqf-heading {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #6b7280;
+}
+
+.iqf-description {
+  min-height: 72px;
+}
+
+.iqf-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.iqf-question-card {
+  border: 1px solid #1e2130;
+  border-radius: 10px;
+  padding: 12px;
+  background: #0d0f14;
+  display: grid;
+  gap: 10px;
+}
+
+.iqf-question-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.iqf-question-top strong {
+  font-size: 13px;
+}
+
+.iqf-options {
+  display: grid;
+  gap: 8px;
+}
+
+.iqf-option-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.iqf-option-input {
+  margin: 0;
+}
+
+.iqf-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.iqf-btn-primary,
+.iqf-btn-outline,
+.iqf-btn-cancel {
+  padding: 9px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.iqf-btn-primary {
+  background: #6366f1;
+  border: none;
+  color: #fff;
+  font-weight: 600;
+}
+
+.iqf-btn-outline {
+  background: transparent;
+  border: 1.5px dashed #2a2d45;
+  color: #6366f1;
+  font-weight: 500;
+}
+
+.iqf-btn-cancel {
+  background: transparent;
+  border: 1px solid #1e2130;
+  color: #6b7280;
+}
+
+.iqf-btn-sm {
+  padding: 5px 10px;
+  font-size: 12px;
+}

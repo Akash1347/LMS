@@ -116,12 +116,12 @@ export const createQuestionsBulkRepository = async ({ quizId, questions }) => {
     );
 };
 
-export const createQuizLessonMappingRepository = async ({ module_id, title, type, quizContentRef, time_limit, order_index }) => {
+export const createQuizLessonMappingRepository = async ({ module_id, title, type, quizContentRef, order_index, public_id }) => {
     return pool.query(
-        `INSERT INTO lesson (module_id, title, type, content_ref, duration_seconds, order_index, public_id)
-        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        `INSERT INTO lesson (module_id, title, type, content_ref, order_index, public_id)
+        VALUES ($1, $2, $3, $4, $5, $6)
         RETURNING *`,
-        [module_id, title, type, quizContentRef, time_limit * 60, order_index, "quiz"]
+        [module_id, title, type, quizContentRef, order_index, public_id]
     );
 };
 

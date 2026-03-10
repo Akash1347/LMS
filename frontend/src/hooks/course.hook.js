@@ -1,14 +1,24 @@
 import {
     createCourseApi,
     createLessonApi,
+    createQuizApi,
     createModuleApi,
     deleteCourseApi,
     deleteLessonApi,
     deleteModuleApi,
+    enrollInCourseApi,
+    getCourseDetailsApi,
+    getCourseEnrollmentAnalyticsApi,
+    getLessonsByModuleIdApi,
+    getModulesByCourseIdApi,
     getCoursesApi,
     updateCourseApi,
     updateModuleApi,
     getBulkCourseApi,
+    startQuizApi,
+    submitQuizAttemptApi,
+    getQuizLeaderboardApi,
+    getQuizDetailedAnalyticsApi,
 } from "@/Api/course.api"
 import { getCoursesOfInstructor, getUserCourse } from "@/Api/user.api"
 import { useMutation, useQuery } from "@tanstack/react-query"
@@ -48,9 +58,21 @@ export const useCreateModuleHook = () => {
 
 export const useCreateLessonHook = () => {
     return useMutation({
-        mutationFn: ({ moduleId, payload }) => createLessonApi(moduleId, payload),
+        mutationFn: ({ moduleId, payload, onUploadProgress }) => createLessonApi(moduleId, payload, onUploadProgress),
         onSuccess: (res) => {
             toast.success(getSuccessMessage(res, "Lesson created successfully"))
+        },
+        onError: (err) => {
+            toast.error(getErrorMessage(err))
+        },
+    })
+}
+
+export const useCreateQuizHook = () => {
+    return useMutation({
+        mutationFn: ({ moduleId, payload }) => createQuizApi(moduleId, payload),
+        onSuccess: (res) => {
+            toast.success(getSuccessMessage(res, "Quiz created successfully"))
         },
         onError: (err) => {
             toast.error(getErrorMessage(err))
@@ -153,11 +175,79 @@ export const useGetCourseDetailsHook = (courseId, enabled = true) => {
     return useQuery({
         queryFn: () => getCourseDetailsApi(courseId),
         queryKey: ['getCourseDetails', courseId],
-        enabled: enabled && courseId,
+        enabled: Boolean(enabled && courseId),
     })
 }
 
-export const getCourseDetailsApi = async (courseId) => {
-    const res = await axios.get(`${COURSE_BASE_URL}/${courseId}`, getAuthConfig())
-    return res.data
+export const useGetCourseEnrollmentAnalyticsHook = (courseId, enabled = true) => {
+    return useQuery({
+        queryFn: () => getCourseEnrollmentAnalyticsApi(courseId),
+        queryKey: ['getCourseEnrollmentAnalytics', courseId],
+        enabled: Boolean(enabled && courseId),
+    })
+}
+
+export const useGetModulesByCourseIdHook = (courseId, enabled = true) => {
+    return useQuery({
+        queryFn: () => getModulesByCourseIdApi(courseId),
+        queryKey: ['getModulesByCourseId', courseId],
+        enabled: Boolean(enabled && courseId),
+    })
+}
+
+export const useGetLessonsByModuleIdHook = (moduleId, enabled = true) => {
+    return useQuery({
+        queryFn: () => getLessonsByModuleIdApi(moduleId),
+        queryKey: ['getLessonsByModuleId', moduleId],
+        enabled: Boolean(enabled && moduleId),
+    })
+}
+
+export const useEnrollInCourseHook = () => {
+    return useMutation({
+        mutationFn: (courseId) => enrollInCourseApi(courseId),
+        onSuccess: (res) => {
+            toast.success(res?.message || "Enrolled in course successfully")
+        },
+        onError: (err) => {
+            toast.error(getErrorMessage(err))
+        },
+    })
+}
+
+export const useStartQuizHook = () => {
+    return useMutation({
+        mutationFn: ({ courseId, quizId }) => startQuizApi(courseId, quizId),
+        onError: (err) => {
+            toast.error(getErrorMessage(err))
+        },
+    })
+}
+
+export const useSubmitQuizAttemptHook = () => {
+    return useMutation({
+        mutationFn: ({ attemptId, answer }) => submitQuizAttemptApi(attemptId, answer),
+        onSuccess: () => {
+            toast.success("Quiz submitted successfully")
+        },
+        onError: (err) => {
+            toast.error(getErrorMessage(err))
+        },
+    })
+}
+
+export const useGetQuizLeaderboardHook = (quizId, enabled = true) => {
+    return useQuery({
+        queryFn: () => getQuizLeaderboardApi(quizId),
+        queryKey: ['getQuizLeaderboard', quizId],
+        enabled: Boolean(enabled && quizId),
+    })
+}
+
+export const useGetQuizDetailedAnalyticsHook = (quizId, enabled = true) => {
+    return useQuery({
+        queryFn: () => getQuizDetailedAnalyticsApi(quizId),
+        queryKey: ['getQuizDetailedAnalytics', quizId],
+        enabled: Boolean(enabled && quizId),
+    })
 }

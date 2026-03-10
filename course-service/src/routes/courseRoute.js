@@ -33,7 +33,7 @@ route.delete('/modules/:module_id', deleteModule);
 
 // Lessons
 route.post('/modules/:module_id/lessons', ...createLesson);
-route.get('/modules/:module_id/lessons', requireAuth, getLessonsByModuleId);
+route.get('/modules/:module_id/lessons', getLessonsByModuleId);
 route.delete('/lessons/:lesson_id', deleteLesson);
 
 //quiz edit
@@ -70,6 +70,7 @@ route.post('/content', requireAuth, requireRole("Instructor"), ...createLesson);
 route.delete('/content', requireAuth, requireRole("Instructor"), deleteLesson);
 
 export default route;
+
 
 
 

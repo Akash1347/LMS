@@ -23,7 +23,7 @@ const normalizedCategory = Array.isArray(category)
 const baseValues = [
         title,
         description || "",
-        normalizedCategory.length > 0 ? `{${normalizedCategory.join(",")}}` : "{}",
+        normalizedCategory.length > 0 ? normalizedCategory : ["general"],
         level,
         language || "english",
         status || "draft",
@@ -94,6 +94,15 @@ export const editCourseRepository = async ({
     course_id,
     instructorId,
 }) => {
+    const normalizedCategory = Array.isArray(category)
+        ? category
+        : typeof category === "string"
+            ? category
+                .split(",")
+                .map((item) => item.trim())
+                .filter(Boolean)
+            : null;
+
     return pool.query(
         `
         UPDATE course SET 
@@ -107,7 +116,7 @@ export const editCourseRepository = async ({
         WHERE id = $8 AND instructor_id = $9
         RETURNING *
         `,
-        [title, description, category ? `{${category}}` : null, level, language ? `{${language}}` : null, price, currency, course_id, instructorId]
+        [title, description, normalizedCategory, level, language, price, currency, course_id, instructorId]
     );
 };
 
@@ -141,6 +150,7 @@ export const getUserEnrolledCoursesRepository = async ({ authorization, course_i
 
     
 };
+
 
 
 

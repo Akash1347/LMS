@@ -10,6 +10,13 @@ import UserCourse from '@/pages/Course/UserCourse'
 import InstructorCourse from '@/pages/Course/InstructorCourse'
 import CreateCourse from '@/pages/Course/CreateCourse'
 import AboutSection from '@/ui/AboutSection'
+import Payment from '@/pages/Payment/Payment'
+import CoursePage from '@/pages/Course/CoursePage'
+import QuizPage from '@/pages/Course/QuizPage'
+import QuizLeaderboardPage from '@/pages/Course/QuizLeaderboardPage'
+import InstructorCourseDetails from '@/pages/Course/InstructorCourseDetails'
+import HomePage from '@/pages/home/HomePage'
+import Dashboard from '@/pages/home/Dashboard'
 
 const MainRoutes = () => {
   return (
@@ -18,17 +25,38 @@ const MainRoutes = () => {
       <Route path='/' element={<AboutSection />} />
       <Route path='/home' element={
         <ProtectecRoutes>
-          <Home />
+          <HomePage />
         </ProtectecRoutes>
       } />
-
+      <Route path='/dashboard' element= {<Dashboard/>} />
       <Route path='/login' element={<LogIn />} />
       <Route path='/register' element={<Register />} />
       <Route path='/course' element={<CourseSection />} />
       <Route path='/course/:id' element={<SingleCourse />} />
+
       <Route path='/user-course' element={
         <ProtectecRoutes allowedRoles={['student']}>
           <UserCourse />
+        </ProtectecRoutes>
+      } />
+      <Route path='/payment/:courseId' element={
+        <ProtectecRoutes allowedRoles={['student']}>
+          <Payment />
+        </ProtectecRoutes>
+      } />
+      <Route path='/course-page/:courseId' element={
+        <ProtectecRoutes allowedRoles={['student']}>
+          <CoursePage />
+        </ProtectecRoutes>
+      } />
+      <Route path='/course-page/:courseId/quiz/:quizId' element={
+        <ProtectecRoutes allowedRoles={['student']}>
+          <QuizPage />
+        </ProtectecRoutes>
+      } />
+      <Route path='/course-page/:courseId/quiz/:quizId/leaderboard' element={
+        <ProtectecRoutes allowedRoles={['student']}>
+          <QuizLeaderboardPage />
         </ProtectecRoutes>
       } />
       <Route path='/instructor-course' element={
@@ -39,6 +67,11 @@ const MainRoutes = () => {
       <Route path='/instructor-course/create' element={
         <ProtectecRoutes allowedRoles={['instructor']}>
           <CreateCourse />
+        </ProtectecRoutes>
+      } />
+      <Route path='/instructor-course/course/:courseId' element={
+        <ProtectecRoutes allowedRoles={['instructor']}>
+          <InstructorCourseDetails />
         </ProtectecRoutes>
       } />
 
