@@ -8,12 +8,33 @@ const getErrorMessage = (err) => {
     return err?.response?.data?.message || err?.message || "Something went wrong"
 }
 
+const normalizeUser = (payload) => {
+    const user = payload?.user || payload?.data?.user || payload?.userData || payload?.data || null
+    if (!user) return null
+
+    return {
+        id: user.user_id || user.id,
+        name: user.user_name || user.name,
+        email: user.email,
+        role: user.role,
+        avatar: user.avatar,
+    }
+}
+
 export const useRegisterHook = () => {
     const navigate = useNavigate()
+    const login = useAuthStore((state) => state.login)
     return useMutation({
         mutationFn: registerApi,
-        onSuccess: (data) => {
+        onSuccess: async (data, variables) => {
             console.log(data)
+            const me = await getUserDataApi().catch(() => null)
+            const normalizedUser = normalizeUser(me || data)
+            login(normalizedUser || {
+                name: variables?.username || 'User',
+                email: variables?.email,
+                role: variables?.role,
+            })
             toast.success(data.message)
             navigate('/')
         },
@@ -26,10 +47,18 @@ export const useRegisterHook = () => {
 
 export const useLoginHook = () => {
     const navigate = useNavigate()
+    const login = useAuthStore((state) => state.login)
     return useMutation({
         mutationFn: loginApi,
-        onSuccess: (data) => {
+        onSuccess: async (data, variables) => {
             console.log(data)
+            const me = await getUserDataApi().catch(() => null)
+            const normalizedUser = normalizeUser(me || data)
+            login(normalizedUser || {
+                name: variables?.email?.split('@')?.[0] || 'User',
+                email: variables?.email,
+                role: 'student',
+            })
             toast.success(data.message)
             navigate('/')
         },

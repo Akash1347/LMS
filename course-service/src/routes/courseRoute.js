@@ -1,6 +1,6 @@
 import { requireRole } from "@akash1347/auth-lib";
 import { requireAuth } from "../config/auth.config.js";
-import { createCourse, deleteCourse, editCourse, getBulkCourseById, getCourseById, getCourses } from "../controllers/course.controller.js";
+import { chatWithCourseAI, createCourse, deleteCourse, editCourse, getBulkCourseById, getCourseById, getCourses } from "../controllers/course.controller.js";
 import { createModule, deleteModule, editModule, getModulesByCourseId } from "../controllers/module.controller.js";
 import { createLesson, deleteLesson, getLessonsByModuleId,
     createQuiz, editQuiz, editQuizQuestion, deleteQuiz, 
@@ -19,6 +19,7 @@ route.get('/health', (req, res) => {
 // Courses
 route.post('/', createCourse);
 route.get('/', getCourses);
+route.post('/chat', chatWithCourseAI);
 //route.post('/bulk', requireAuth, getBulkCourseById);
 route.get('/bulk', getBulkCourseById);
 route.get('/:course_id', getCourseById);
@@ -70,6 +71,8 @@ route.post('/content', requireAuth, requireRole("Instructor"), ...createLesson);
 route.delete('/content', requireAuth, requireRole("Instructor"), deleteLesson);
 
 export default route;
+
+
 
 
 

@@ -1,5 +1,6 @@
 import React from 'react'
 import { useGetCourseDetailsHook, useGetCourseEnrollmentAnalyticsHook, useEnrollInCourseHook } from '@/hooks/course.hook'
+import { useCourseStore } from '@/Store/user.store'
 import { useNavigate, useParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 
@@ -9,12 +10,18 @@ const SingleCourse = () => {
   const { data, isLoading, error } = useGetCourseDetailsHook(id)
   const { mutate: enrollInCourse, isPending: enrolling } = useEnrollInCourseHook()
   const { data: analyticsData, isLoading: analyticsLoading } = useGetCourseEnrollmentAnalyticsHook(id)
+  const enrolledCourses = useCourseStore((state) => state.enrolledCourses)
   
   const courseDetails = data?.data || null
   const course = courseDetails?.course || null
   const modules = Array.isArray(courseDetails?.modules) ? courseDetails.modules : []
   const instructor = courseDetails?.instructor || null
   const purchasedCount = Number(analyticsData?.enrolled_students || 0)
+  const enrollment = Array.isArray(enrolledCourses)
+    ? enrolledCourses.find((item) => String(item?.course_id) === String(id))
+    : null
+  const isEnrolled = Boolean(enrollment)
+  const isActiveEnrollment = enrollment?.status === 'active'
 
   if (isLoading) return (
     <div className='flex min-h-screen items-center justify-center bg-slate-50'>
@@ -25,6 +32,10 @@ const SingleCourse = () => {
   if (!course) return <div className='p-8 text-center text-slate-500'>Course not found.</div>
 
   const handleEnrollNow = () => {
+    if (isEnrolled) {
+      navigate(isActiveEnrollment ? `/course-page/${id}` : `/payment/${id}`)
+      return
+    }
     enrollInCourse(id, {
       onSuccess: () => navigate(`/payment/${id}`),
     })
@@ -124,7 +135,11 @@ const SingleCourse = () => {
                     disabled={enrolling}
                     className='w-full rounded-xl bg-indigo-600 px-6 py-4 text-base font-bold text-white shadow-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2 disabled:opacity-70'
                   >
-                    {enrolling ? 'Processing...' : 'Enroll Now'}
+                    {enrolling
+                      ? 'Processing...'
+                      : isEnrolled
+                        ? (isActiveEnrollment ? 'Continue Learning' : 'Complete Payment')
+                        : 'Enroll Now'}
                   </motion.button>
                   <button className='w-full rounded-xl border-2 border-slate-200 bg-white px-6 py-4 text-base font-bold text-slate-700 hover:bg-slate-50'>
                     Preview Course

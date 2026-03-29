@@ -14,6 +14,7 @@ router.get('/modules/:module_id/lessons', authenticate, courseProxy);
 router.get('/instructor/courses', authenticate, authorize("Instructor"), courseProxy);
 router.get('/quizzes/:quiz_id', authenticate, authorize("Instructor"), courseProxy);
 router.get('/quizzes/:quiz_id/questions', authenticate, authorize("Instructor"), courseProxy);
+router.post('/chat', authenticate, courseProxy);
  
 router.get(/.*/, courseProxy);
 

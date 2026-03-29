@@ -21,7 +21,9 @@ import {
     getQuizDetailedAnalyticsApi,
 } from "@/Api/course.api"
 import { getCoursesOfInstructor, getUserCourse } from "@/Api/user.api"
+import { useCourseStore } from "@/Store/user.store"
 import { useMutation, useQuery } from "@tanstack/react-query"
+import { useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 
 const getErrorMessage = (err) => {
@@ -204,9 +206,30 @@ export const useGetLessonsByModuleIdHook = (moduleId, enabled = true) => {
 }
 
 export const useEnrollInCourseHook = () => {
+    const queryClient = useQueryClient()
+    const setEnrolledCourses = useCourseStore((state) => state.setEnrolledCourses)
+    const enrolledCourses = useCourseStore((state) => state.enrolledCourses)
+
     return useMutation({
         mutationFn: (courseId) => enrollInCourseApi(courseId),
-        onSuccess: (res) => {
+        onSuccess: (res, courseId) => {
+            const idAsString = String(courseId)
+            const exists = Array.isArray(enrolledCourses)
+                ? enrolledCourses.some((item) => String(item?.course_id) === idAsString)
+                : false
+
+            if (!exists) {
+                setEnrolledCourses([
+                    ...(Array.isArray(enrolledCourses) ? enrolledCourses : []),
+                    {
+                        course_id: courseId,
+                        status: 'pending',
+                        enrolled_at: new Date().toISOString(),
+                    },
+                ])
+            }
+
+            queryClient.invalidateQueries({ queryKey: ['getUserCourse'] })
             toast.success(res?.message || "Enrolled in course successfully")
         },
         onError: (err) => {

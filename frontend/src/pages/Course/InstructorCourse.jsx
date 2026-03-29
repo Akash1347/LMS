@@ -1,338 +1,169 @@
-import React, { useState } from 'react'
+import React, { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useCreateCourseHook } from '@/hooks/course.hook'
 import { useCourseStore } from '@/Store/user.store'
-import { toast } from 'sonner'
-import { motion, AnimatePresence } from 'framer-motion'
+import { useGetCourseOfInstructorHook } from '@/hooks/course.hook'
+import { motion } from 'framer-motion'
 
-/* ─── Minimal Icons ─────────────────────────────────────────────────── */
 const Icons = {
-  Back: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6"></polyline></svg>,
-  X: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>,
-  Upload: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>,
-  Image: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+  Plus: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>,
+  Book: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>,
+  Users: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>,
+  Dollar: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>,
+  Edit: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>,
 }
 
-/* ─── Reusable Field Component ──────────────────────────────────────── */
-const Field = ({ label, required, children, className = '' }) => (
-  <div className={`flex flex-col gap-2 ${className}`}>
-    <label className='text-[11px] font-bold uppercase tracking-widest text-zinc-500'>
-      {label} {required && <span className="text-zinc-900">*</span>}
-    </label>
-    {children}
-  </div>
-)
-
-const initialForm = {
-  title: '',
-  description: '',
-  categories: [],
-  level: 'beginner',
-  status: 'draft',
-  language: 'english',
-  price: '0',
-  currency: 'INR',
-  file: null,
+const ease = [0.16, 1, 0.3, 1]
+const containerVariants = {
+  hidden: { opacity: 0 },
+  show: { opacity: 1, transition: { staggerChildren: 0.1 } }
+}
+const cardVariants = {
+  hidden: { opacity: 0, y: 15 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.5, ease } }
 }
 
-const CreateCourse = () => {
+const statusColors = {
+  draft: 'bg-slate-100 text-slate-700',
+  published: 'bg-emerald-100 text-emerald-700',
+  archived: 'bg-amber-100 text-amber-700'
+}
+
+const InstructorCourse = () => {
   const navigate = useNavigate()
-  const [formData, setFormData] = useState(initialForm)
-  const [categoryInput, setCategoryInput] = useState('') 
-
-  const { mutate: createCourse, isPending } = useCreateCourseHook()
   const createdCourses = useCourseStore((state) => state.createdCourses)
   const setCreatedCourses = useCourseStore((state) => state.setCreatedCourses)
-
-  const handleChange = (e) => {
-    const { name, value, files } = e.target
-    if (name === 'file') {
-      setFormData((prev) => ({ ...prev, file: files?.[0] || null }))
-      return
+  
+  const { data: instructorCourseData, isSuccess: instructorCourseSuccess } = useGetCourseOfInstructorHook()
+  
+  useEffect(() => {
+    if (instructorCourseSuccess && instructorCourseData?.data) {
+      setCreatedCourses(instructorCourseData.data)
     }
-    setFormData((prev) => ({ ...prev, [name]: value }))
-  }
-
-  /* ─── Category Handlers ─── */
-  const handleAddCategory = (e) => {
-    e.preventDefault()
-    const trimmed = categoryInput.trim()
-    if (trimmed && !formData.categories.includes(trimmed)) {
-      setFormData((prev) => ({
-        ...prev,
-        categories: [...prev.categories, trimmed]
-      }))
-      setCategoryInput('')
-    }
-  }
-
-  const handleRemoveCategory = (index) => {
-    setFormData((prev) => ({
-      ...prev,
-      categories: prev.categories.filter((_, i) => i !== index)
-    }))
-  }
-
-  const handleCategoryKeyDown = (e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault()
-      handleAddCategory(e)
-    }
-  }
-
-  /* ─── Submit Handler ─── */
-  const handleSubmit = (e) => {
-    e.preventDefault()
-    
-    if (formData.categories.length === 0) {
-      toast.error("Please add at least one category")
-      return
-    }
-
-    const payload = new FormData()
-    payload.append('title', formData.title)
-    payload.append('description', formData.description)
-    payload.append('category', formData.categories.join(','))
-    payload.append('level', formData.level)
-    payload.append('status', formData.status)
-    payload.append('language', formData.language)
-    payload.append('price', formData.price === '' ? '0' : String(Number(formData.price)))
-    payload.append('currency', formData.currency.toUpperCase())
-
-    if (formData.file) {
-      payload.append('file', formData.file)
-    }
-
-    createCourse(payload, {
-      onSuccess: (res) => {
-        const created = res?.data?.data
-        if (created) {
-          setCreatedCourses([created, ...(Array.isArray(createdCourses) ? createdCourses : [])])
-          toast.success('Course created successfully')
-          navigate(`/instructor-course/course/${created.id}`)
-        }
-        setFormData(initialForm)
-        setCategoryInput('')
-      },
-      onError: (err) => {
-        console.error('Error creating course:', err)
-        toast.error('Error creating course. Please try again.')
-      },
-    })
-  }
+  }, [instructorCourseSuccess, instructorCourseData, setCreatedCourses])
 
   return (
-    <section className='min-h-screen bg-[#FAFAFA] px-6 py-12 selection:bg-zinc-200 md:py-20'>
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-        className='mx-auto max-w-3xl'
-      >
-        {/* ── Header ── */}
-        <div className='mb-8 flex items-center justify-between'>
-          <div>
-            <button
-              type='button'
-              onClick={() => navigate('/instructor-course')}
-              className='mb-4 flex items-center gap-1.5 text-sm font-medium text-zinc-500 transition-colors hover:text-zinc-900 focus:outline-none'
-            >
-              <Icons.Back /> Back to Dashboard
-            </button>
-            <h1 className='text-3xl font-extrabold tracking-tight text-zinc-900'>Create Course</h1>
-            <p className='mt-2 text-sm text-zinc-500'>Fill in the details below to initialize your new curriculum.</p>
-          </div>
-        </div>
-
-        {/* ── Form Card ── */}
-        <form onSubmit={handleSubmit} className='rounded-[2rem] border border-zinc-200 bg-white p-8 shadow-sm md:p-10'>
-          <div className='grid grid-cols-1 gap-8 md:grid-cols-2'>
-            
-            {/* Title */}
-            <Field label='Course Title' required className='md:col-span-2'>
-              <input
-                name='title'
-                required
-                value={formData.title}
-                onChange={handleChange}
-                placeholder='e.g., Advanced React Patterns'
-                className='w-full rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-900 outline-none transition-all placeholder:text-zinc-400 focus:border-zinc-400 focus:bg-white focus:ring-4 focus:ring-zinc-100'
-              />
-            </Field>
-
-            {/* Description */}
-            <Field label='Description' required className='md:col-span-2'>
-              <textarea
-                name='description'
-                required
-                rows={4}
-                value={formData.description}
-                onChange={handleChange}
-                placeholder='What will students learn in this course?'
-                className='w-full resize-y rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-900 outline-none transition-all placeholder:text-zinc-400 focus:border-zinc-400 focus:bg-white focus:ring-4 focus:ring-zinc-100'
-              />
-            </Field>
-
-            {/* Categories (Tag Input) */}
-            <Field label='Categories' required className='md:col-span-2'>
-              <div className='flex gap-2'>
-                <input
-                  type='text'
-                  value={categoryInput}
-                  onChange={(e) => setCategoryInput(e.target.value)}
-                  onKeyDown={handleCategoryKeyDown}
-                  placeholder='e.g., Web Development'
-                  className='flex-1 rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-900 outline-none transition-all placeholder:text-zinc-400 focus:border-zinc-400 focus:bg-white focus:ring-4 focus:ring-zinc-100'
-                />
-                <button
-                  type='button'
-                  onClick={handleAddCategory}
-                  className='rounded-xl bg-zinc-100 px-6 py-3 text-sm font-semibold text-zinc-900 transition-colors hover:bg-zinc-200 focus:outline-none'
-                >
-                  Add
-                </button>
-              </div>
-              
-              <div className='mt-3 flex flex-wrap gap-2'>
-                <AnimatePresence>
-                  {formData.categories.map((cat, index) => (
-                    <motion.span
-                      key={cat}
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.8 }}
-                      className='inline-flex items-center gap-1.5 rounded-lg bg-zinc-100 px-3 py-1.5 text-sm font-medium text-zinc-700'
-                    >
-                      {cat}
-                      <button
-                        type='button'
-                        onClick={() => handleRemoveCategory(index)}
-                        className='text-zinc-400 transition-colors hover:text-zinc-900'
-                      >
-                        <Icons.X />
-                      </button>
-                    </motion.span>
-                  ))}
-                </AnimatePresence>
-              </div>
-            </Field>
-
-            {/* Language */}
-            <Field label='Language' required>
-              <input
-                name='language'
-                required
-                value={formData.language}
-                onChange={handleChange}
-                placeholder='e.g., English'
-                className='w-full rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-900 outline-none transition-all placeholder:text-zinc-400 focus:border-zinc-400 focus:bg-white focus:ring-4 focus:ring-zinc-100'
-              />
-            </Field>
-
-            {/* Level */}
-            <Field label='Difficulty Level' required>
-              <select
-                name='level'
-                required
-                value={formData.level}
-                onChange={handleChange}
-                className='w-full rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-900 outline-none transition-all focus:border-zinc-400 focus:bg-white focus:ring-4 focus:ring-zinc-100'
-              >
-                <option value='beginner'>Beginner</option>
-                <option value='intermediate'>Intermediate</option>
-                <option value='advanced'>Advanced</option>
-              </select>
-            </Field>
-
-            {/* Status */}
-            <Field label='Initial Status' required>
-              <select
-                name='status'
-                required
-                value={formData.status}
-                onChange={handleChange}
-                className='w-full rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-900 outline-none transition-all focus:border-zinc-400 focus:bg-white focus:ring-4 focus:ring-zinc-100'
-              >
-                <option value='draft'>Draft (Hidden)</option>
-                <option value='published'>Published (Public)</option>
-              </select>
-            </Field>
-
-            {/* Price & Currency */}
-            <div className='flex gap-4'>
-              <Field label='Price' required className='flex-1'>
-                <input
-                  type='number'
-                  required
-                  min='0'
-                  name='price'
-                  value={formData.price}
-                  onChange={handleChange}
-                  className='w-full rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-900 outline-none transition-all placeholder:text-zinc-400 focus:border-zinc-400 focus:bg-white focus:ring-4 focus:ring-zinc-100'
-                />
-              </Field>
-              <Field label='Currency' required className='w-24'>
-                <input
-                  name='currency'
-                  required
-                  maxLength={3}
-                  value={formData.currency}
-                  onChange={handleChange}
-                  className='w-full rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-semibold uppercase tracking-widest text-zinc-900 outline-none transition-all focus:border-zinc-400 focus:bg-white focus:ring-4 focus:ring-zinc-100'
-                />
-              </Field>
+    <section className='min-h-screen bg-[#FAFAFA] px-6 py-16 selection:bg-zinc-200 md:py-24 font-sans'>
+      <div className='mx-auto max-w-6xl'>
+        
+        {/* Header */}
+        <motion.div 
+          initial={{ opacity: 0, y: -10 }} 
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, ease }}
+          className='mb-12 border-b border-zinc-200/60 pb-8'
+        >
+          <div className='flex items-center justify-between'>
+            <div>
+              <h1 className='text-3xl font-extrabold tracking-tight text-zinc-900 sm:text-4xl'>My Courses</h1>
+              <p className='mt-2.5 text-base text-zinc-500'>Manage and track your created courses.</p>
             </div>
-
-            {/* Thumbnail Upload */}
-            <Field label='Course Thumbnail' className='md:col-span-2'>
-              <div className='relative flex w-full flex-col items-center justify-center rounded-2xl border-2 border-dashed border-zinc-200 bg-zinc-50 px-6 py-10 transition-colors hover:border-zinc-300 hover:bg-zinc-100/50'>
-                <div className='mb-3 rounded-full bg-white p-3 text-zinc-400 shadow-sm ring-1 ring-zinc-200'>
-                  {formData.file ? <Icons.Image /> : <Icons.Upload />}
-                </div>
-                <div className='text-center'>
-                  <p className='text-sm font-medium text-zinc-900'>
-                    {formData.file ? formData.file.name : 'Click to upload thumbnail'}
-                  </p>
-                  <p className='mt-1 text-xs text-zinc-500'>
-                    {formData.file ? 'Click to select a different file' : 'PNG, JPG, WEBP up to 5MB'}
-                  </p>
-                </div>
-                {/* Hidden File Input covering the entire div */}
-                <input
-                  type='file'
-                  name='file'
-                  accept='image/*'
-                  onChange={handleChange}
-                  className='absolute inset-0 h-full w-full cursor-pointer opacity-0 outline-none'
-                />
-              </div>
-            </Field>
-
-          </div>
-
-          {/* Submit Actions */}
-          <div className='mt-10 flex items-center justify-end gap-3 border-t border-zinc-100 pt-6'>
-            <button
-              type='button'
-              onClick={() => navigate('/instructor-course')}
-              className='rounded-xl px-5 py-3 text-sm font-semibold text-zinc-600 transition-colors hover:bg-zinc-100 focus:outline-none'
-            >
-              Cancel
-            </button>
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              type='submit'
-              disabled={isPending}
-              className='rounded-xl bg-zinc-950 px-8 py-3 text-sm font-semibold text-white shadow-md transition-all hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50'
+              onClick={() => navigate('/instructor-course/create')}
+              className='inline-flex items-center gap-2 rounded-full bg-zinc-900 px-6 py-3 text-sm font-medium text-white shadow-sm hover:bg-zinc-800'
             >
-              {isPending ? 'Creating...' : 'Create Course'}
+              <Icons.Plus /> Create Course
             </motion.button>
           </div>
-        </form>
-      </motion.div>
+        </motion.div>
+
+        {/* Empty State */}
+        {!Array.isArray(createdCourses) || createdCourses.length === 0 ? (
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.5, ease }}
+            className='flex flex-col items-center justify-center rounded-3xl border border-dashed border-zinc-300 bg-zinc-50/50 p-16 text-center'
+          >
+            <div className='mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-white text-zinc-400 shadow-sm border border-zinc-100'>
+               <Icons.Book />
+            </div>
+            <h3 className='text-xl font-semibold tracking-tight text-zinc-900'>No courses yet</h3>
+            <p className='mt-2 max-w-sm text-sm leading-relaxed text-zinc-500'>
+              Start creating your first course and share your knowledge with students worldwide.
+            </p>
+            <motion.button 
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => navigate('/instructor-course/create')}
+              className='mt-8 inline-flex items-center gap-2 rounded-full bg-zinc-900 px-6 py-3 text-sm font-medium text-white shadow-sm'
+            >
+              <Icons.Plus /> Create Your First Course
+            </motion.button>
+          </motion.div>
+        ) : (
+          
+          /* Course Grid */
+          <motion.div 
+            variants={containerVariants}
+            initial="hidden"
+            animate="show"
+            className='grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3'
+          >
+            {createdCourses.map((course) => {
+              const courseId = course?.id
+              const status = course?.status || 'draft'
+              const isPublished = status === 'published'
+
+              return (
+                <motion.article
+                  variants={cardVariants}
+                  key={courseId}
+                  className='group flex flex-col justify-between overflow-hidden rounded-2xl border border-zinc-200/80 bg-white p-6 transition-all duration-300 hover:border-zinc-300 hover:shadow-[0_8px_30px_rgba(0,0,0,0.04)]'
+                >
+                  <div>
+                    {/* Status Badge */}
+                    <div className='mb-5 flex items-start justify-between gap-4'>
+                      <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest ${statusColors[status] || statusColors.draft}`}>
+                        {status}
+                      </span>
+                      <span className='text-xs text-zinc-400'>
+                        {course?.level || 'Beginner'}
+                      </span>
+                    </div>
+
+                    {/* Course Info */}
+                    <h2 className='mb-3 line-clamp-2 text-lg font-bold leading-tight tracking-tight text-zinc-900'>
+                      {course?.title || 'Untitled Course'}
+                    </h2>
+                    
+                    <p className='mb-6 line-clamp-2 text-sm leading-relaxed text-zinc-500'>
+                      {course?.description || 'No description provided.'}
+                    </p>
+
+                    {/* Meta Data */}
+                    <div className='mb-6 space-y-3'>
+                      <div className='flex items-center gap-3 text-sm text-zinc-500'>
+                        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-zinc-50 border border-zinc-100"><Icons.Users /></span>
+                        <span>{course?.enrolledCount || 0} students enrolled</span>
+                      </div>
+                      <div className='flex items-center gap-3 text-sm text-zinc-500'>
+                        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-zinc-50 border border-zinc-100"><Icons.Dollar /></span>
+                        <span>{course?.currency || 'INR'} {course?.price || 0}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Footer Actions */}
+                  <div className='pt-4 border-t border-zinc-100'>
+                    <motion.button
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => navigate(`/instructor-course/course/${courseId}`)}
+                      disabled={!courseId}
+                      className='w-full flex items-center justify-center gap-2 rounded-xl bg-zinc-900 px-4 py-3 text-sm font-semibold text-white transition-all hover:bg-zinc-800 shadow-sm hover:shadow focus:outline-none disabled:cursor-not-allowed disabled:opacity-50'
+                    >
+                      <Icons.Edit /> Manage Course
+                    </motion.button>
+                  </div>
+                </motion.article>
+              )
+            })}
+          </motion.div>
+        )}
+      </div>
     </section>
   )
 }
 
-export default CreateCourse
+export default InstructorCourse

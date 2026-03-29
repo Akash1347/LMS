@@ -11,6 +11,7 @@ import {
     getCourseByIdRepository,
     getBulkCourseByIdRepository,
 } from "../repositories/course.repositories.js";
+import { askCourseAI } from "../services/langGraph.js";
 
 
 export const createCourse = [
@@ -208,4 +209,30 @@ export const getBulkCourseById = asyncHandler(async (req, res) => {
         data: result.rows
     });
 
-})
+});
+
+export const chatWithCourseAI = asyncHandler(async (req, res) => {
+    const message = req.body?.message || req.query?.message;
+    const courseId = req.body?.courseId || req.query?.courseId || null;
+    const role = req.headers["x-user-role"] || req.body?.role || "student";
+    const userId = req.headers["x-user-id"] || req.body?.userId || "anonymous";
+
+    if (!message || !String(message).trim()) {
+        return res.status(400).json({
+            success: false,
+            message: "message is required",
+        });
+    }
+
+    const reply = await askCourseAI(String(message).trim(), {
+        role: String(role).toLowerCase(),
+        userId: String(userId),
+        courseId: courseId ? String(courseId) : null,
+    });
+
+    return res.status(200).json({
+        success: true,
+        message: "AI response generated successfully",
+        data: { reply },
+    });
+});

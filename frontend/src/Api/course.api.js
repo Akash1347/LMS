@@ -171,6 +171,18 @@ export const getBulkCourseApi = async (courseIds = []) => {
     return res.data
 }
 
+export const chatWithCourseAIApi = async (message, courseId = null) => {
+    const res = await axios.post(
+        `${COURSE_BASE_URL}/chat`,
+        { message, courseId },
+        getAuthConfig()
+    )
+
+    return res.data
+}
+
+
+
 
 
 

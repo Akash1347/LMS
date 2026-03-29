@@ -18,8 +18,6 @@ const Navbar = () => {
     const coursesPath = role === 'student' ? '/user-course' : '/instructor-course'
     const coursesLabel = role === 'student' ? 'My Courses' : 'Created Courses'
 
-    if (!isLoggedIn) return null
-
     const handleLogout = () => {
         mutate(undefined, {
             onSuccess: () => navigate('/'),
@@ -27,12 +25,18 @@ const Navbar = () => {
         })
     }
 
-    const navLinks = [
-        { name: 'Dashboard', path: '/dashboard' },
-        { name: 'Home', path: '/home' },
-        { name: 'Courses', path: '/course' },
-        { name: coursesLabel, path: coursesPath },
-    ]
+    const navLinks = isLoggedIn
+        ? [
+            { name: 'Dashboard', path: '/dashboard' },
+            { name: 'Home', path: '/home' },
+            { name: 'Courses', path: '/course' },
+            { name: coursesLabel, path: coursesPath },
+        ]
+        : [
+            { name: 'Dashboard', path: '/dashboard' },
+            { name: 'Home', path: '/' },
+            { name: 'Courses', path: '/course' },
+        ]
 
     return (
         <header className='sticky top-0 z-50 w-full border-b border-zinc-200/50 bg-white/70 backdrop-blur-md'>
@@ -41,7 +45,7 @@ const Navbar = () => {
                 {/* ── Logo Brand ── */}
                 <div 
                     className='flex cursor-pointer items-center gap-3' 
-                    onClick={() => navigate('/home')}
+                    onClick={() => navigate(isLoggedIn ? '/home' : '/')}
                 >
                     <div className='flex h-8 w-8 items-center justify-center rounded bg-zinc-900'>
                         <svg width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='white' strokeWidth='2.5'>
@@ -79,58 +83,75 @@ const Navbar = () => {
 
                 {/* ── Profile Actions ── */}
                 <div className='flex items-center gap-4'>
-                    <Popover open={open} onOpenChange={setOpen}>
-                        <PopoverTrigger asChild>
-                            <motion.button
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
-                                className="inline-flex cursor-pointer items-center justify-center rounded-full p-0 outline-none ring-2 ring-transparent transition-all hover:ring-zinc-200 focus:ring-zinc-200"
+                    {isLoggedIn ? (
+                        <Popover open={open} onOpenChange={setOpen}>
+                            <PopoverTrigger asChild>
+                                <motion.button
+                                    whileHover={{ scale: 1.05 }}
+                                    whileTap={{ scale: 0.95 }}
+                                    className="inline-flex cursor-pointer items-center justify-center rounded-full p-0 outline-none ring-2 ring-transparent transition-all hover:ring-zinc-200 focus:ring-zinc-200"
+                                >
+                                    <Avatar className="h-9 w-9 border border-zinc-200">
+                                        <AvatarImage src={user?.avatar || "https://github.com/shadcn.png"} />
+                                        <AvatarFallback className="bg-zinc-100 text-zinc-900 font-medium">
+                                            {user?.name?.charAt(0) || 'U'}
+                                        </AvatarFallback>
+                                    </Avatar>
+                                </motion.button>
+                            </PopoverTrigger>
+
+                            <PopoverContent 
+                                className="w-56 overflow-hidden rounded-xl border border-zinc-200 bg-white p-1 shadow-xl" 
+                                align="end"
+                                sideOffset={8}
                             >
-                                <Avatar className="h-9 w-9 border border-zinc-200">
-                                    <AvatarImage src={user?.avatar || "https://github.com/shadcn.png"} />
-                                    <AvatarFallback className="bg-zinc-100 text-zinc-900 font-medium">
-                                        {user?.name?.charAt(0) || 'U'}
-                                    </AvatarFallback>
-                                </Avatar>
-                            </motion.button>
-                        </PopoverTrigger>
+                                <div className="border-b border-zinc-100 px-3 py-2.5">
+                                    <p className="text-sm font-medium text-zinc-900">{user?.name || 'Student'}</p>
+                                    <p className="text-xs text-zinc-500 truncate">{user?.email || 'student@example.com'}</p>
+                                </div>
+                                
+                                <div className="flex flex-col p-1">
+                                    <button 
+                                        onClick={() => { setOpen(false); navigate('/profile'); }}
+                                        className="flex w-full items-center rounded-lg px-3 py-2 text-sm font-medium text-zinc-600 transition-colors hover:bg-zinc-100 hover:text-zinc-900"
+                                    >
+                                        Profile
+                                    </button>
+                                    <button 
+                                        onClick={() => { setOpen(false); navigate('/settings'); }}
+                                        className="flex w-full items-center rounded-lg px-3 py-2 text-sm font-medium text-zinc-600 transition-colors hover:bg-zinc-100 hover:text-zinc-900"
+                                    >
+                                        Settings
+                                    </button>
+                                </div>
 
-                        <PopoverContent 
-                            className="w-56 overflow-hidden rounded-xl border border-zinc-200 bg-white p-1 shadow-xl" 
-                            align="end"
-                            sideOffset={8}
-                        >
-                            <div className="border-b border-zinc-100 px-3 py-2.5">
-                                <p className="text-sm font-medium text-zinc-900">{user?.name || 'Student'}</p>
-                                <p className="text-xs text-zinc-500 truncate">{user?.email || 'student@example.com'}</p>
-                            </div>
-                            
-                            <div className="flex flex-col p-1">
-                                <button 
-                                    onClick={() => { setOpen(false); navigate('/profile'); }}
-                                    className="flex w-full items-center rounded-lg px-3 py-2 text-sm font-medium text-zinc-600 transition-colors hover:bg-zinc-100 hover:text-zinc-900"
-                                >
-                                    Profile
-                                </button>
-                                <button 
-                                    onClick={() => { setOpen(false); navigate('/settings'); }}
-                                    className="flex w-full items-center rounded-lg px-3 py-2 text-sm font-medium text-zinc-600 transition-colors hover:bg-zinc-100 hover:text-zinc-900"
-                                >
-                                    Settings
-                                </button>
-                            </div>
-
-                            <div className="border-t border-zinc-100 p-1">
-                                <button 
-                                    onClick={handleLogout} 
-                                    disabled={isPending}
-                                    className="flex w-full items-center rounded-lg px-3 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50"
-                                >
-                                    {isPending ? 'Logging out...' : 'Log out'}
-                                </button>
-                            </div>
-                        </PopoverContent>
-                    </Popover>
+                                <div className="border-t border-zinc-100 p-1">
+                                    <button 
+                                        onClick={handleLogout} 
+                                        disabled={isPending}
+                                        className="flex w-full items-center rounded-lg px-3 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50"
+                                    >
+                                        {isPending ? 'Logging out...' : 'Log out'}
+                                    </button>
+                                </div>
+                            </PopoverContent>
+                        </Popover>
+                    ) : (
+                        <div className='flex items-center gap-3'>
+                            <button
+                                onClick={() => navigate('/login')}
+                                className='text-sm font-semibold text-zinc-600 hover:text-zinc-900 transition-colors'
+                            >
+                                Sign in
+                            </button>
+                            <button
+                                onClick={() => navigate('/register')}
+                                className='rounded-full bg-zinc-900 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-700 transition-colors'
+                            >
+                                Get Started
+                            </button>
+                        </div>
+                    )}
                 </div>
 
             </div>
