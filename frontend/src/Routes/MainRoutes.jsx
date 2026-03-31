@@ -14,6 +14,7 @@ import Payment from '@/pages/Payment/Payment'
 import CoursePage from '@/pages/Course/CoursePage'
 import QuizPage from '@/pages/Course/QuizPage'
 import QuizLeaderboardPage from '@/pages/Course/QuizLeaderboardPage'
+import QuizStatisticsPage from '@/pages/Course/QuizStatisticsPage'
 import InstructorCourseDetails from '@/pages/Course/InstructorCourseDetails'
 import HomePage from '@/pages/home/HomePage'
 import Dashboard from '@/pages/home/Dashboard'
@@ -57,6 +58,11 @@ const MainRoutes = () => {
       <Route path='/course-page/:courseId/quiz/:quizId/leaderboard' element={
         <ProtectecRoutes allowedRoles={['student']}>
           <QuizLeaderboardPage />
+        </ProtectecRoutes>
+      } />
+      <Route path='/course-page/:courseId/quiz/:quizId/statistics' element={
+        <ProtectecRoutes allowedRoles={['student']}>
+          <QuizStatisticsPage />
         </ProtectecRoutes>
       } />
       <Route path='/instructor-course' element={

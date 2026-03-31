@@ -6,6 +6,5 @@ const __dirname = dirname(__filename);
 dotenv.config({ path: resolve(__dirname, "../../.env") });
 
 console.log("Environment variables loaded.....");
- 
 
 export default process.env;

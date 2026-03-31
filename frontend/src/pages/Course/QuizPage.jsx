@@ -136,11 +136,18 @@ const QuizPage = () => {
                     Score: <span className='text-indigo-600'>{result?.totalScore ?? 0}</span>
                   </p>
                 )}
-                <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-                  type='button' onClick={() => navigate(`/course-page/${courseId}/quiz/${quizId}/leaderboard`)}
-                  className='mt-6 rounded-lg bg-indigo-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700'>
-                  View Leaderboard
-                </motion.button>
+                <div className='mt-6 flex flex-wrap justify-center gap-3'>
+                  <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                    type='button' onClick={() => navigate(`/course-page/${courseId}/quiz/${quizId}/statistics`)}
+                    className='rounded-lg bg-emerald-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700'>
+                    View Statistics & Answers
+                  </motion.button>
+                  <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                    type='button' onClick={() => navigate(`/course-page/${courseId}/quiz/${quizId}/leaderboard`)}
+                    className='rounded-lg bg-indigo-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700'>
+                    View Leaderboard
+                  </motion.button>
+                </div>
               </div>
             ) : (
               <div className='grid min-h-[390px] grid-cols-1 md:grid-cols-[1.45fr_1fr]'>
@@ -337,11 +344,18 @@ const QuizPage = () => {
                   Score: <span className='text-indigo-600'>{result?.totalScore ?? 0}</span>
                 </p>
                 <p className='text-sm text-slate-500 mt-1'>{attemptedCount}/{totalQuestions} answered</p>
-                <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-                  type='button' onClick={() => navigate(`/course-page/${courseId}/quiz/${quizId}/leaderboard`)}
-                  className='mt-4 rounded-md bg-indigo-600 px-6 py-2.5 text-sm font-medium text-white hover:bg-indigo-700'>
-                  View Leaderboard
-                </motion.button>
+                <div className='mt-4 flex flex-wrap justify-center gap-3'>
+                  <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                    type='button' onClick={() => navigate(`/course-page/${courseId}/quiz/${quizId}/statistics`)}
+                    className='rounded-md bg-emerald-600 px-6 py-2.5 text-sm font-medium text-white hover:bg-emerald-700'>
+                    View Statistics & Answers
+                  </motion.button>
+                  <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                    type='button' onClick={() => navigate(`/course-page/${courseId}/quiz/${quizId}/leaderboard`)}
+                    className='rounded-md bg-indigo-600 px-6 py-2.5 text-sm font-medium text-white hover:bg-indigo-700'>
+                    View Leaderboard
+                  </motion.button>
+                </div>
               </motion.div>
             )}
           </motion.div>

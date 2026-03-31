@@ -19,6 +19,8 @@ import {
     submitQuizAttemptApi,
     getQuizLeaderboardApi,
     getQuizDetailedAnalyticsApi,
+    getQuizStatisticsApi,
+    getQuizDetailedAnswersApi,
 } from "@/Api/course.api"
 import { getCoursesOfInstructor, getUserCourse } from "@/Api/user.api"
 import { useCourseStore } from "@/Store/user.store"
@@ -271,6 +273,22 @@ export const useGetQuizDetailedAnalyticsHook = (quizId, enabled = true) => {
     return useQuery({
         queryFn: () => getQuizDetailedAnalyticsApi(quizId),
         queryKey: ['getQuizDetailedAnalytics', quizId],
+        enabled: Boolean(enabled && quizId),
+    })
+}
+
+export const useGetQuizStatisticsHook = (quizId, enabled = true) => {
+    return useQuery({
+        queryFn: () => getQuizStatisticsApi(quizId),
+        queryKey: ['getQuizStatistics', quizId],
+        enabled: Boolean(enabled && quizId),
+    })
+}
+
+export const useGetQuizDetailedAnswersHook = (quizId, enabled = true) => {
+    return useQuery({
+        queryFn: () => getQuizDetailedAnswersApi(quizId),
+        queryKey: ['getQuizDetailedAnswers', quizId],
         enabled: Boolean(enabled && quizId),
     })
 }

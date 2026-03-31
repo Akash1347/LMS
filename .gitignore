@@ -3,6 +3,8 @@ node_modules/
 resources/
 auth-lib/
 
+.history/
+
 # Environment variables
 .env
 .env.*

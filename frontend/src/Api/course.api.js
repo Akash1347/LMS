@@ -172,12 +172,40 @@ export const getBulkCourseApi = async (courseIds = []) => {
 }
 
 export const chatWithCourseAIApi = async (message, courseId = null) => {
+    // Extract user ID from JWT token
+    const token = getStoredToken()
+    let userId = null
+    if (token) {
+        try {
+            const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')))
+            userId = payload?.sub || null
+        } catch (e) {
+            console.error('Error parsing token:', e)
+        }
+    }
+
     const res = await axios.post(
         `${COURSE_BASE_URL}/chat`,
-        { message, courseId },
+        { message, courseId, userId },
         getAuthConfig()
     )
 
+    return res.data
+}
+
+export const getQuizStatisticsApi = async (quizId) => {
+    const res = await axios.get(
+        `${COURSE_BASE_URL}/quizzes/${quizId}/statistics`,
+        getAuthConfig()
+    )
+    return res.data
+}
+
+export const getQuizDetailedAnswersApi = async (quizId) => {
+    const res = await axios.get(
+        `${COURSE_BASE_URL}/quizzes/${quizId}/detailed-answers`,
+        getAuthConfig()
+    )
     return res.data
 }
 

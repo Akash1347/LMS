@@ -215,7 +215,8 @@ export const chatWithCourseAI = asyncHandler(async (req, res) => {
     const message = req.body?.message || req.query?.message;
     const courseId = req.body?.courseId || req.query?.courseId || null;
     const role = req.headers["x-user-role"] || req.body?.role || "student";
-    const userId = req.headers["x-user-id"] || req.body?.userId || "anonymous";
+    // Prioritize userId from body (sent by frontend from JWT), then fall back to header
+    const userId = req.body?.userId || req.headers["x-user-id"] || "anonymous";
 
     if (!message || !String(message).trim()) {
         return res.status(400).json({
@@ -223,6 +224,8 @@ export const chatWithCourseAI = asyncHandler(async (req, res) => {
             message: "message is required",
         });
     }
+
+    console.log("Chat request:", { message: String(message).trim(), role, userId, courseId });
 
     const reply = await askCourseAI(String(message).trim(), {
         role: String(role).toLowerCase(),
