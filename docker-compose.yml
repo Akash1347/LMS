@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.8"
 
 services:
   rabbitmq:
@@ -10,8 +10,100 @@ services:
     environment:
       RABBITMQ_DEFAULT_USER: admin
       RABBITMQ_DEFAULT_PASS: admin
+    healthcheck:
+      test: [ "CMD", "rabbitmq-diagnostics", "-q", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
+
+  auth-service:
+    build:
+      context: ./auth-service
+    container_name: auth-service
+    env_file:
+      - ./auth-service/.env
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    command: node src/index.js
+    ports:
+      - "3001:3000"
+
+  course-service:
+    build:
+      context: ./course-service
+    container_name: course-service
+    env_file:
+      - ./course-service/.env
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    command: node src/index.js
+    ports:
+      - "3002:3001"
+
+  enrollment-service:
+    build:
+      context: ./enrollment-service
+    container_name: enrollment-service
+    env_file:
+      - ./enrollment-service/.env
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    command: node src/index.js
+    ports:
+      - "3003:3002"
+
+  notification-service:
+    build:
+      context: ./notification-service
+    container_name: notification-service
+    env_file:
+      - ./notification-service/.env
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    command: node src/index.js
+    ports:
+      - "3004:3006"
+
+  api-gateway:
+    build:
+      context: ./api-gateway
+    container_name: api-gateway
+    env_file:
+      - ./api-gateway/.env
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      auth-service:
+        condition: service_started
+      course-service:
+        condition: service_started
+      enrollment-service:
+        condition: service_started
+      notification-service:
+        condition: service_started
+    command: node src/index.js
+    ports:
+      - "3000:3000"
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: frontend
+    env_file:
+      - ./frontend/.env
+    depends_on:
+      api-gateway:
+        condition: service_started
+    command: npm run dev -- --host 0.0.0.0 --port 5173
+    ports:
+      - "5173:5173"
 
 volumes:
   rabbitmq_data:

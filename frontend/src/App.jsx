@@ -22,7 +22,7 @@ const normalizeUser = (payload) => {
 
 const App = () => {
   const location = useLocation()
-  const hiddenRoute = ['/login', '/register']
+  const hiddenRoute = ['/login', '/register', '/forgot-password']
   const shouldHideNavbar = hiddenRoute.some((route) => location.pathname.startsWith(route))
   const isLoggedIn = useAuthStore((state) => state.isLoggedIn)
   

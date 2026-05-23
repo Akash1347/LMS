@@ -1,4 +1,14 @@
-import { getUserDataApi, loginApi, logoutApi, registerApi } from "@/Api/user.api"
+import {
+    changePasswordApi,
+    forgotPasswordApi,
+    getUserDataApi,
+    loginApi,
+    logoutApi,
+    registerApi,
+    resetPasswordApi,
+    sendVerificationOtpApi,
+    verifyOtpApi,
+} from "@/Api/user.api"
 import { useAuthStore, useCourseStore } from "@/Store/user.store"
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { useNavigate } from "react-router-dom"
@@ -103,6 +113,71 @@ export const useLogoutHook = () => {
                 return
             }
             console.log(err)
+            toast.error(getErrorMessage(err))
+        }
+    })
+}
+
+export const useForgotPasswordHook = () => {
+    return useMutation({
+        mutationFn: forgotPasswordApi,
+        onSuccess: (data) => {
+            toast.success(data?.message || "OTP sent to your email")
+        },
+        onError: (err) => {
+            toast.error(getErrorMessage(err))
+        }
+    })
+}
+
+export const useResetPasswordHook = () => {
+    const navigate = useNavigate()
+    return useMutation({
+        mutationFn: resetPasswordApi,
+        onSuccess: (data) => {
+            toast.success(data?.message || "Password reset successful")
+            navigate('/login')
+        },
+        onError: (err) => {
+            toast.error(getErrorMessage(err))
+        }
+    })
+}
+
+export const useChangePasswordHook = () => {
+    const user = useAuthStore((state) => state.user)
+    return useMutation({
+        mutationFn: (payload) => changePasswordApi({ payload, userId: user?.id || user?.user_id }),
+        onSuccess: (data) => {
+            toast.success(data?.message || "Password changed successfully")
+        },
+        onError: (err) => {
+            toast.error(getErrorMessage(err))
+        }
+    })
+}
+
+export const useSendVerificationOtpHook = () => {
+    const user = useAuthStore((state) => state.user)
+    return useMutation({
+        mutationFn: () => sendVerificationOtpApi(user?.id || user?.user_id),
+        onSuccess: (data) => {
+            toast.success(data?.message || "Verification OTP sent")
+        },
+        onError: (err) => {
+            toast.error(getErrorMessage(err))
+        }
+    })
+}
+
+export const useVerifyOtpHook = () => {
+    const user = useAuthStore((state) => state.user)
+    return useMutation({
+        mutationFn: ({ otp }) => verifyOtpApi({ otp, userId: user?.id || user?.user_id }),
+        onSuccess: (data) => {
+            toast.success(data?.message || "Account verified successfully")
+        },
+        onError: (err) => {
             toast.error(getErrorMessage(err))
         }
     })

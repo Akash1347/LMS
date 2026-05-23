@@ -159,3 +159,83 @@ export const getCourseDetailsOfUser = async() => {
     return res.data
 
 }
+
+export const forgotPasswordApi = async (payload) => {
+    const res = await axios.post(
+        `${AUTH_BASE_URL}/forgot-password`,
+        payload,
+        {
+            headers: { "Content-Type": "application/json" },
+            withCredentials: true,
+        }
+    )
+
+    return res.data
+}
+
+export const resetPasswordApi = async (payload) => {
+    const res = await axios.patch(
+        `${AUTH_BASE_URL}/reset-password`,
+        payload,
+        {
+            headers: { "Content-Type": "application/json" },
+            withCredentials: true,
+        }
+    )
+
+    return res.data
+}
+
+export const changePasswordApi = async ({ payload, userId }) => {
+    const token = getStoredToken()
+    const res = await axios.patch(
+        `${AUTH_BASE_URL}/change-password`,
+        payload,
+        {
+            headers: {
+                "Content-Type": "application/json",
+                ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                ...(userId ? { "x-user-id": userId } : {}),
+            },
+            withCredentials: true,
+        }
+    )
+
+    return res.data
+}
+
+export const sendVerificationOtpApi = async (userId) => {
+    const token = getStoredToken()
+    const res = await axios.post(
+        `${AUTH_BASE_URL}/send-verification-otp`,
+        {},
+        {
+            headers: {
+                "Content-Type": "application/json",
+                ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                ...(userId ? { "x-user-id": userId } : {}),
+            },
+            withCredentials: true,
+        }
+    )
+
+    return res.data
+}
+
+export const verifyOtpApi = async ({ otp, userId }) => {
+    const token = getStoredToken()
+    const res = await axios.post(
+        `${AUTH_BASE_URL}/verify-otp`,
+        { otp },
+        {
+            headers: {
+                "Content-Type": "application/json",
+                ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                ...(userId ? { "x-user-id": userId } : {}),
+            },
+            withCredentials: true,
+        }
+    )
+
+    return res.data
+}

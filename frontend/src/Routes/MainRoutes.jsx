@@ -1,6 +1,7 @@
 import Home from '../pages/User/Home'
 import LogIn from '../pages/Auth/LogIn'
 import Register from '../pages/Auth/Register'
+import ForgotPassword from '../pages/Auth/ForgotPassword'
 import React from 'react'
 import { Route, Routes } from 'react-router-dom'
 import { ProtectecRoutes } from './ProtectedRoutes'
@@ -18,6 +19,7 @@ import QuizStatisticsPage from '@/pages/Course/QuizStatisticsPage'
 import InstructorCourseDetails from '@/pages/Course/InstructorCourseDetails'
 import HomePage from '@/pages/home/HomePage'
 import Dashboard from '@/pages/home/Dashboard'
+import Settings from '@/pages/User/Settings'
 
 const MainRoutes = () => {
   return (
@@ -32,6 +34,7 @@ const MainRoutes = () => {
       <Route path='/dashboard' element= {<Dashboard/>} />
       <Route path='/login' element={<LogIn />} />
       <Route path='/register' element={<Register />} />
+      <Route path='/forgot-password' element={<ForgotPassword />} />
       <Route path='/course' element={<CourseSection />} />
       <Route path='/course/:id' element={<SingleCourse />} />
 
@@ -78,6 +81,11 @@ const MainRoutes = () => {
       <Route path='/instructor-course/course/:courseId' element={
         <ProtectecRoutes allowedRoles={['instructor']}>
           <InstructorCourseDetails />
+        </ProtectecRoutes>
+      } />
+      <Route path='/settings' element={
+        <ProtectecRoutes>
+          <Settings />
         </ProtectecRoutes>
       } />
 
