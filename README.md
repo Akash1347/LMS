@@ -1,60 +1,258 @@
-# 🎓 AI-Powered Learning Management System (LMS) Microservices
+# 🎓 AI-Powered Learning Management System (LMS)
 
-> A highly scalable, event-driven, and AI-integrated Learning Management System designed to handle high concurrency and deliver a personalized educational experience.
+> A production-inspired, event-driven Learning Management System built with **Node.js microservices**, **RabbitMQ**, **Docker**, **React**, and **LangGraph AI**. Designed to demonstrate scalable backend architecture, asynchronous communication, and AI-powered learning assistance.
 
-[![Microservices](https://img.shields.io/badge/Architecture-Microservices-blue.svg)](#) 
-[![Docker](https://img.shields.io/badge/Docker-Containerized-2496ED.svg)](#)
-[![RabbitMQ](https://img.shields.io/badge/RabbitMQ-Event_Driven-FF6600.svg)](#)
-[![LangGraph](https://img.shields.io/badge/AI-LangGraph-8A2BE2.svg)](#)
+![Architecture](https://img.shields.io/badge/Architecture-Microservices-blue)
+![Node.js](https://img.shields.io/badge/Backend-Node.js-339933)
+![React](https://img.shields.io/badge/Frontend-React-61DAFB)
+![Docker](https://img.shields.io/badge/Container-Docker-2496ED)
+![RabbitMQ](https://img.shields.io/badge/Event-RabbitMQ-FF6600)
+![PostgreSQL](https://img.shields.io/badge/Database-PostgreSQL-4169E1)
+![LangGraph](https://img.shields.io/badge/AI-LangGraph-purple)
+![License](https://img.shields.io/badge/License-MIT-green)
 
-## 💡 The Problem & The Solution
-Traditional LMS platforms often suffer from tight coupling, making them hard to scale during peak enrollment periods. Furthermore, they lack intelligent, on-demand assistance for students. 
+---
 
-**This project solves that by:**
-1. Decoupling core business logic into independently deployable microservices (Auth, Course, Enrollment, Notifications).
-2. Utilizing an asynchronous, event-driven architecture to prevent system bottlenecks during high-traffic events like course registrations.
-3. Integrating a LangGraph-powered AI backend to provide dynamic course analytics and contextual student assistance.
+# 📖 Overview
 
-## 🛠️ Tech Stack & System Architecture
+Traditional Learning Management Systems (LMS) are often built as monolithic applications, making them difficult to scale, maintain, and extend as the user base grows.
 
-### **Core Infrastructure & Communication**
-*   **API Gateway:** Serves as the robust single entry point, handling routing, rate limiting, and centralized JWT authorization.
-*   **Message Broker (RabbitMQ):** Facilitates resilient, asynchronous communication between services (e.g., the enrollment service triggering the notification service)[cite: 1].
-*   **Containerization:** Fully dockerized services managed via `docker-compose.yml` for reliable, consistent deployments across environments[cite: 1].
+This project demonstrates how an LMS can be designed using a **Microservice Architecture**, where each business capability runs independently and communicates asynchronously through **RabbitMQ**.
 
-### **Microservices (Node.js / Express)**
-*   **Auth Service:** Manages user authentication, secure JWT generation, and exposes JSON Web Key Sets (JWKS) for distributed verification[cite: 1].
-*   **Course Service:** The core engine managing modules, lessons, and quizzes[cite: 1]. Features advanced AI capabilities via LangGraph (including `sql_executor`, `planner`, and `general_qa` nodes)[cite: 1].
-*   **Enrollment Service:** Handles course registrations and tracks user progress, publishing events to RabbitMQ upon successful enrollment[cite: 1].
-*   **Notification Service:** A resilient background job processing service featuring worker threads and retry mechanisms for sending critical email templates (welcome, verification, password resets)[cite: 1].
+The platform also integrates **LangGraph-powered AI**, enabling contextual question answering, intelligent course assistance, and learning analytics.
 
-### **Frontend (React.js / Vite)**
-*   **Framework:** Built with React and Vite for lightning-fast HMR and optimized production builds[cite: 1].
-*   **UI/UX:** Modern, accessible UI utilizing custom components (Avatar, Popover, Sonner, Spinners) and responsive CSS design[cite: 1].
-*   **State & Routing:** Features protected routes, custom API hooks, and centralized user stores for a seamless single-page application experience[cite: 1].
+---
 
-## 🧪 Testing & Reliability
-Startups move fast, which makes reliable code critical. This system incorporates testing to ensure stability across deployments:
-*   **Course Service Tests:** Includes dedicated unit and integration tests (e.g., `test_router.js`, `test_sql_validator.js`, `test_workflow.js`) to validate critical business logic and AI workflow execution[cite: 1].
-*   **Fault Tolerance:** The Notification Service employs asynchronous background jobs with built-in retry mechanisms (`retry.js`) to guarantee email delivery even during partial system outages[cite: 1].
+# ✨ Features
 
-## ✨ Key Product Features
-*   🤖 **AI-Enhanced Learning:** An integrated `CourseAIChat` interface powered by a custom LangGraph state machine, allowing dynamic, context-aware student interactions[cite: 1].
-*   🔐 **Zero-Trust Security:** Centralized API Gateway handling proxy routing and rate limiting, backed by strict authentication middleware across all internal services[cite: 1].
-*   📊 **Interactive Quizzes & Analytics:** Instructor tools for quiz creation (`InstructorQuizCreationForm.jsx`) paired with live student analytics and leaderboards (`QuizLeaderboardPage.jsx`, `QuizStatisticsPage.jsx`)[cite: 1].
-*   👨‍🏫 **Multi-Tenant Portals:** Distinct dashboards and workflows for instructors (course creation/management) and students (course consumption/progress tracking)[cite: 1].
+## 🔐 Authentication
 
-## 📂 Project Structure
+- JWT Authentication
+- Refresh Tokens
+- Role-Based Access Control
+- Public JWKS Endpoint
+- Secure Password Hashing
+
+---
+
+## 📚 Course Management
+
+- Create Courses
+- Manage Modules
+- Upload Lessons
+- Quiz Management
+- Student Progress Tracking
+
+---
+
+## 🤖 AI Learning Assistant
+
+- LangGraph Workflow
+- Context-Aware Q&A
+- SQL Agent
+- Course Analytics
+- Learning Recommendations
+
+---
+
+## ⚡ Event-Driven Architecture
+
+RabbitMQ enables asynchronous communication between services.
+
+Example events:
+
+- User Registered
+- Course Purchased
+- Enrollment Completed
+- Quiz Submitted
+- Password Reset Requested
+
+This architecture prevents tight coupling between services and improves scalability.
+
+---
+
+## 📧 Notification System
+
+- Welcome Emails
+- Email Verification
+- Password Reset
+- Retry Mechanism
+- Worker Threads
+- Background Jobs
+
+---
+
+# 🏗️ System Architecture
+
+```text
+                        Internet
+                           │
+                    React + Vite
+                           │
+                     API Gateway
+                           │
+        ┌──────────┬─────────────┬──────────────┐
+        │          │             │              │
+   Auth Service Course Service Enrollment Notification
+        │          │             │              │
+        └──────────┴─────────────┴──────────────┘
+                     │
+                  RabbitMQ
+                     │
+              Event Processing
+                     │
+                PostgreSQL DB
+```
+
+---
+
+# 🚀 Tech Stack
+
+## Backend
+
+- Node.js
+- Express.js
+- PostgreSQL
+- RabbitMQ
+- JWT
+- Docker
+
+### Frontend
+
+- React
+- Vite
+- Axios
+- React Router
+
+### AI
+
+- LangGraph
+- OpenAI / Gemini
+- SQL Agent
+- Planner Workflow
+
+### DevOps
+
+- Docker
+- Docker Compose
+- Render
+- Neon PostgreSQL
+- Upstash Redis
+- CloudAMQP
+- GitHub Actions
+
+---
+
+# 📂 Project Structure
 
 ```text
 LMS/
-├── api-gateway/            # Centralized API routing, rate limiting, auth middleware[cite: 1]
-├── auth-service/           # User authentication, JWT issuance, public JWKS[cite: 1]
-├── course-service/         # Modules, lessons, quizzes, LangGraph AI integration, and tests[cite: 1]
-├── enrollment-service/     # Handles enrollments and RabbitMQ event pipelines[cite: 1]
-├── notification-service/   # Email templates, background retry jobs, and mail workers[cite: 1]
-├── frontend/               # React + Vite application[cite: 1]
-│   ├── src/pages/          # Auth, Course, Payment, and User dashboards[cite: 1]
-│   ├── src/ui/             # Reusable UI components & AIChat interface[cite: 1]
-│   └── src/Store/          # Global state management[cite: 1]
-└── docker-compose.yml      # Orchestrates all microservices[cite: 1]
+│
+├── api-gateway/
+│
+├── auth-service/
+│
+├── course-service/
+│
+├── enrollment-service/
+│
+├── notification-service/
+│
+├── frontend/
+│
+├── docker-compose.yml
+│
+└── README.md
+```
+
+---
+
+# 🔄 Event Flow
+
+## Student Enrollment
+
+```text
+Student
+
+↓
+
+API Gateway
+
+↓
+
+Enrollment Service
+
+↓
+
+Save Enrollment
+
+↓
+
+Publish Event
+
+↓
+
+RabbitMQ
+
+↓
+
+Notification Service
+
+↓
+
+Send Welcome Email
+```
+
+---
+
+# 🔐 Security
+
+- JWT Authentication
+- bcrypt Password Hashing
+- Role-Based Authorization
+- Protected APIs
+- API Gateway Validation
+- Environment Variables
+- Secure HTTP Headers
+
+---
+
+# 📈 Scalability
+
+Each service can be scaled independently.
+
+Examples:
+
+- Heavy login traffic → Scale Auth Service
+- High course traffic → Scale Course Service
+- Massive email sending → Scale Notification Workers
+
+RabbitMQ ensures background processing does not block user requests.
+
+---
+
+# 📌 Future Improvements
+
+- Kubernetes Deployment
+- Prometheus Monitoring
+- Grafana Dashboards
+- Distributed Tracing (Jaeger)
+- Payment Service
+- Recommendation Engine
+- WebSocket Notifications
+- API Versioning
+- Elasticsearch Search
+- CDN Integration
+
+---
+
+
+# 📜 License
+
+This project is licensed under the MIT License.
+
+---
+
+# ⭐ Support
+
+If you found this project useful, consider giving it a ⭐ on GitHub.
