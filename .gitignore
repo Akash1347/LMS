@@ -12,6 +12,7 @@ auth-lib/
 .env.development
 .env.test
 .env.production
+!frontend/.env.production
 
 # Build outputs
 dist/
