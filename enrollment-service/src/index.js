@@ -17,6 +17,10 @@ app.get("/", (req, res) => {
     res.send("Enrollment Service - Hello World!");
 });
 
+app.get("/health", (req, res) => {
+    res.status(200).json({ status: "OK" });
+});
+
 app.use('/api/enrollment', enrollmentRoute);
 app.listen(PORT, () => {
     logger.info({ event: "service_started", port: String(PORT), nodeEnv: process.env.NODE_ENV || "development" });

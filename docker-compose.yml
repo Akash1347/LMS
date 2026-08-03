@@ -1,33 +1,12 @@
 version: "3.8"
 
 services:
-  rabbitmq:
-    image: rabbitmq:3-management
-    container_name: rabbitmq
-    ports:
-      - "5672:5672"
-      - "15672:15672"
-    environment:
-      RABBITMQ_DEFAULT_USER: admin
-      RABBITMQ_DEFAULT_PASS: admin
-    healthcheck:
-      test: [ "CMD", "rabbitmq-diagnostics", "-q", "ping" ]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 20s
-    volumes:
-      - rabbitmq_data:/var/lib/rabbitmq
-
   auth-service:
     build:
       context: ./auth-service
     container_name: auth-service
     env_file:
       - ./auth-service/.env
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
     command: node src/index.js
     ports:
       - "3001:3000"
@@ -38,9 +17,6 @@ services:
     container_name: course-service
     env_file:
       - ./course-service/.env
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
     command: node src/index.js
     ports:
       - "3002:3001"
@@ -51,9 +27,6 @@ services:
     container_name: enrollment-service
     env_file:
       - ./enrollment-service/.env
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
     command: node src/index.js
     ports:
       - "3003:3002"
@@ -64,9 +37,6 @@ services:
     container_name: notification-service
     env_file:
       - ./notification-service/.env
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
     command: node src/index.js
     ports:
       - "3004:3006"
@@ -78,8 +48,6 @@ services:
     env_file:
       - ./api-gateway/.env
     depends_on:
-      rabbitmq:
-        condition: service_healthy
       auth-service:
         condition: service_started
       course-service:
@@ -104,6 +72,3 @@ services:
     command: npm run dev -- --host 0.0.0.0 --port 5173
     ports:
       - "5173:5173"
-
-volumes:
-  rabbitmq_data:
